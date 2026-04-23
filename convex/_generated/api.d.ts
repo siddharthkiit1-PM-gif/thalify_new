@@ -13,6 +13,7 @@ import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
 import type * as data_foodMatcher from "../data/foodMatcher.js";
 import type * as data_indianFoods from "../data/indianFoods.js";
+import type * as email from "../email.js";
 import type * as family from "../family.js";
 import type * as http from "../http.js";
 import type * as lab from "../lab.js";
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   chat: typeof chat;
   "data/foodMatcher": typeof data_foodMatcher;
   "data/indianFoods": typeof data_indianFoods;
+  email: typeof email;
   family: typeof family;
   http: typeof http;
   lab: typeof lab;

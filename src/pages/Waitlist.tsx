@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { useAction } from 'convex/react'
+import { api } from '../../convex/_generated/api'
 import './Waitlist.css'
 
 // Countdown to 25 April 2026, 9:00 AM IST
@@ -35,15 +37,35 @@ interface HeroFormProps {
 }
 
 function HeroForm({ dark = false, inline = false }: HeroFormProps) {
+  const joinWaitlist = useAction(api.waitlist.joinWaitlist)
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [city, setCity] = useState('')
   const [done, setDone] = useState(false)
+  const [position, setPosition] = useState<number | null>(null)
+  const [emailSent, setEmailSent] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
+  const [alreadyJoined, setAlreadyJoined] = useState(false)
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!email.trim()) return
-    setDone(true)
+    if (!email.trim() || submitting) return
+    setErrorMsg('')
+    setSubmitting(true)
+    try {
+      const res = await joinWaitlist({ email: email.trim() })
+      setPosition(res.position)
+      setEmailSent(res.emailSent)
+      setAlreadyJoined(res.emailError === 'already_joined')
+      setEmailError(res.emailError && res.emailError !== 'already_joined' ? res.emailError : null)
+      setDone(true)
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Something went wrong — please retry.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   if (done) {
@@ -51,12 +73,21 @@ function HeroForm({ dark = false, inline = false }: HeroFormProps) {
       <div className="success-state">
         <div className="success-check">&#10003;</div>
         <div className="serif" style={{ fontSize: 24, marginBottom: 6, color: dark ? 'var(--cream)' : 'var(--ink)' }}>
-          Seat #248 reserved.
+          {alreadyJoined ? `You're already in — seat #${position}.` : `Seat #${position ?? '—'} reserved.`}
         </div>
         <div style={{ fontSize: 14, color: dark ? 'rgba(254,252,248,0.7)' : 'var(--muted)', lineHeight: 1.6 }}>
-          We'll send your activation link on{' '}
-          <b style={{ color: dark ? 'var(--sage-500)' : 'var(--sage-700)' }}>25 April at 9:00 AM IST</b>.
-          <br />Check <b style={{ color: dark ? 'var(--cream)' : 'var(--ink)' }}>{email}</b>.
+          {emailSent ? (
+            <>We just sent a confirmation to <b style={{ color: dark ? 'var(--cream)' : 'var(--ink)' }}>{email}</b>. Check your inbox (and spam folder, just in case).</>
+          ) : alreadyJoined ? (
+            <>This email is already on the waitlist. We'll notify you on <b style={{ color: dark ? 'var(--sage-500)' : 'var(--sage-700)' }}>25 April at 9:00 AM IST</b>.</>
+          ) : (
+            <>You're saved. Activation link lands on <b style={{ color: dark ? 'var(--sage-500)' : 'var(--sage-700)' }}>25 April at 9:00 AM IST</b> at <b style={{ color: dark ? 'var(--cream)' : 'var(--ink)' }}>{email}</b>.</>
+          )}
+          {emailError && (
+            <div style={{ marginTop: 8, fontSize: 12, opacity: 0.8 }}>
+              Note: we couldn't send the confirmation email right now, but your spot is saved.
+            </div>
+          )}
         </div>
       </div>
     )
@@ -73,9 +104,10 @@ function HeroForm({ dark = false, inline = false }: HeroFormProps) {
           onChange={e => setEmail(e.target.value)}
           required
         />
-        <button className="hero-submit" type="submit">
-          Claim my seat <span>&#8594;</span>
+        <button className="hero-submit" type="submit" disabled={submitting}>
+          {submitting ? 'Saving…' : <>Claim my seat <span>&#8594;</span></>}
         </button>
+        {errorMsg && <div style={{ color: '#b91c1c', fontSize: 13, marginTop: 8 }}>{errorMsg}</div>}
       </form>
     )
   }
@@ -111,10 +143,10 @@ function HeroForm({ dark = false, inline = false }: HeroFormProps) {
           </div>
         ))}
       </div>
-      <button className="go-btn" type="submit">
-        Claim seat #248 of 500
-        <span className="arrow">&#8594;</span>
+      <button className="go-btn" type="submit" disabled={submitting}>
+        {submitting ? 'Saving your seat…' : <>Claim seat #248 of 500<span className="arrow">&#8594;</span></>}
       </button>
+      {errorMsg && <div style={{ color: '#f87171', fontSize: 13, marginTop: 8 }}>{errorMsg}</div>}
       <div className="seats-bar">
         <span style={{ color: 'var(--sage-500)', fontWeight: 700, fontFamily: 'var(--mono)' }}>247/500</span>
         <div className="seats-progress">
