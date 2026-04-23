@@ -9,7 +9,7 @@ export default function Auth() {
   const navigate = useNavigate()
   const { signIn } = useAuthActions()
   const { isAuthenticated } = useConvexAuth()
-  const [tab, setTab] = useState<Tab>('login')
+  const [tab, setTab] = useState<Tab>('register')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -34,8 +34,15 @@ export default function Auth() {
         await signIn('password', { email, password, flow: 'signIn' })
         navigate('/dashboard')
       }
-    } catch {
-      setError(tab === 'login' ? 'Incorrect email or password' : 'An account with this email already exists')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (tab === 'login') {
+        setError('Incorrect email or password')
+      } else if (msg.toLowerCase().includes('exists') || msg.toLowerCase().includes('duplicate')) {
+        setError('An account with this email already exists — try Login instead')
+      } else {
+        setError(msg || 'Registration failed — please try again')
+      }
     } finally {
       setLoading(false)
     }
