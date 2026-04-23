@@ -31,21 +31,21 @@ export const saveMessage = mutation({
 
 export const chatWithCoach = action({
   args: { message: v.string() },
-  handler: async (ctx, { message }) => {
+  handler: async (ctx, { message }): Promise<string> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    const [profile, todayLogs] = await Promise.all([
-      ctx.runQuery(api.users.getProfile),
-      ctx.runQuery(api.meals.getTodayLogs, { date: new Date().toISOString().split("T")[0] }),
-    ]);
+    const profile = await ctx.runQuery(api.users.getProfile);
+    const todayLogs = await ctx.runQuery(api.meals.getTodayLogs, { date: new Date().toISOString().split("T")[0] });
 
-    const totalCal = todayLogs.reduce((acc: number, l: any) => acc + l.totalCal, 0);
-    const mealSummary = todayLogs.length > 0
-      ? todayLogs.map((l: any) => `${l.mealType}: ${l.items.map((i: any) => i.name).join(", ")} (${l.totalCal} cal)`).join("\n")
+    const totalCal: number = todayLogs.reduce((acc: number, l: { totalCal: number }) => acc + l.totalCal, 0);
+    const mealSummary: string = todayLogs.length > 0
+      ? todayLogs.map((l: { mealType: string; totalCal: number; items: { name: string }[] }) =>
+          `${l.mealType}: ${l.items.map((i) => i.name).join(", ")} (${l.totalCal} cal)`
+        ).join("\n")
       : "No meals logged yet today.";
 
-    const systemPrompt = `You are a personal nutrition coach specializing in Indian food.
+    const systemPrompt: string = `You are a personal nutrition coach specializing in Indian food.
 
 User profile:
 - Goal: ${profile?.goal ?? "maintain"}
@@ -74,7 +74,7 @@ Rules:
       messages: [{ role: "user", content: message }],
     });
 
-    const aiText = (response.content[0] as { type: string; text: string }).text;
+    const aiText: string = (response.content[0] as { type: string; text: string }).text;
     await ctx.runMutation(api.chat.saveMessage, { from: "ai", text: aiText });
 
     return aiText;
