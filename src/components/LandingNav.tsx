@@ -6,8 +6,8 @@ export default function LandingNav() {
     <div className="nav">
       <div className="nav-inner">
         <div className="brand">
-          <div className="brand-mark">HC</div>
-          <span>HealthCoach AI</span>
+          <div className="brand-mark">Th</div>
+          <span>Thalify</span>
         </div>
         <div className="nav-links" style={{ justifyContent: 'center' }}>
           <div className="nav-link">Features</div>

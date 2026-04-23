@@ -32,8 +32,8 @@ export default function Navbar() {
     <div className="nav">
       <div className="nav-inner">
         <div className="brand" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-          <div className="brand-mark">HC</div>
-          <span>HealthCoach AI</span>
+          <div className="brand-mark">Th</div>
+          <span>Thalify</span>
         </div>
         <div className="nav-links">
           {LINKS.map(s => (

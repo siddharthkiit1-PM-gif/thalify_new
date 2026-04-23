@@ -9,7 +9,12 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as chat from "../chat.js";
+import type * as data_indianFoods from "../data/indianFoods.js";
+import type * as family from "../family.js";
 import type * as http from "../http.js";
+import type * as meals from "../meals.js";
+import type * as scan from "../scan.js";
 import type * as users from "../users.js";
 import type * as waitlist from "../waitlist.js";
 
@@ -21,7 +26,12 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  chat: typeof chat;
+  "data/indianFoods": typeof data_indianFoods;
+  family: typeof family;
   http: typeof http;
+  meals: typeof meals;
+  scan: typeof scan;
   users: typeof users;
   waitlist: typeof waitlist;
 }>;

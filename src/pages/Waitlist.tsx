@@ -156,8 +156,8 @@ export default function Waitlist() {
       {/* Nav */}
       <div className="waitlist-nav">
         <div className="brand">
-          <div className="brand-mark">HC</div>
-          <span>HealthCoach AI</span>
+          <div className="brand-mark">Th</div>
+          <span>Thalify</span>
         </div>
         <div className="nav-cta">
           <span style={{ color: 'var(--muted)', fontSize: 13 }}>Launching 25 April</span>
@@ -430,9 +430,9 @@ export default function Waitlist() {
       {/* FOOTER */}
       <section className="wl-section">
         <div className="footer">
-          <div>&copy; 2026 HealthCoach AI &middot; Koramangala, Bengaluru</div>
+          <div>&copy; 2026 Thalify &middot; Koramangala, Bengaluru</div>
           <div>
-            <a href="mailto:hello@healthcoach.ai">hello@healthcoach.ai</a>
+            <a href="mailto:hello@thalify.com">hello@thalify.com</a>
             <a href="#">Privacy</a>
             <a href="#">Terms</a>
           </div>

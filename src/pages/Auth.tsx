@@ -45,8 +45,8 @@ export default function Auth() {
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--cream)' }}>
       <div style={{ width: '100%', maxWidth: 420, padding: 40, background: 'var(--sand)', borderRadius: 20, border: '1px solid var(--border)' }}>
         <div className="brand" style={{ marginBottom: 28 }}>
-          <div className="brand-mark">HC</div>
-          <span style={{ fontSize: 18, fontWeight: 600 }}>HealthCoach AI</span>
+          <div className="brand-mark">Th</div>
+          <span style={{ fontSize: 18, fontWeight: 600 }}>Thalify</span>
         </div>
 
         <div style={{ display: 'flex', gap: 4, marginBottom: 28, background: 'var(--cream)', padding: 4, borderRadius: 10 }}>
