@@ -1,6 +1,6 @@
 import { action, mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { sendEmail, waitlistWelcomeHtml, EmailError } from "./email";
 
 const LAUNCH_DATE = "Friday, 25 April at 9:00 AM IST";
