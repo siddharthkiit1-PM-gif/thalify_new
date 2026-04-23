@@ -1,0 +1,90 @@
+export type FoodEntry = {
+  cal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  category: 'carb' | 'protein' | 'vegetable' | 'fat' | 'beverage';
+};
+
+export const INDIAN_FOODS: Record<string, FoodEntry> = {
+  // Carbs
+  roti:         { cal: 71,  protein: 3,  carbs: 15, fat: 0.4, category: 'carb' },
+  chapati:      { cal: 71,  protein: 3,  carbs: 15, fat: 0.4, category: 'carb' },
+  rice:         { cal: 206, protein: 4,  carbs: 45, fat: 0.4, category: 'carb' },
+  idli:         { cal: 39,  protein: 2,  carbs: 8,  fat: 0.2, category: 'carb' },
+  dosa:         { cal: 168, protein: 4,  carbs: 28, fat: 4,   category: 'carb' },
+  paratha:      { cal: 200, protein: 4,  carbs: 28, fat: 8,   category: 'carb' },
+  poha:         { cal: 250, protein: 4,  carbs: 49, fat: 4,   category: 'carb' },
+  upma:         { cal: 230, protein: 5,  carbs: 38, fat: 7,   category: 'carb' },
+  puri:         { cal: 150, protein: 3,  carbs: 20, fat: 7,   category: 'carb' },
+  bhatura:      { cal: 250, protein: 5,  carbs: 35, fat: 10,  category: 'carb' },
+  naan:         { cal: 260, protein: 8,  carbs: 45, fat: 5,   category: 'carb' },
+  biryani:      { cal: 290, protein: 8,  carbs: 42, fat: 10,  category: 'carb' },
+  khichdi:      { cal: 200, protein: 7,  carbs: 34, fat: 4,   category: 'carb' },
+  pulao:        { cal: 220, protein: 5,  carbs: 40, fat: 5,   category: 'carb' },
+  uttapam:      { cal: 200, protein: 5,  carbs: 32, fat: 5,   category: 'carb' },
+  pesarattu:    { cal: 160, protein: 7,  carbs: 26, fat: 3,   category: 'carb' },
+  appam:        { cal: 120, protein: 3,  carbs: 22, fat: 2,   category: 'carb' },
+  // Proteins
+  dal:          { cal: 180, protein: 12, carbs: 24, fat: 4,   category: 'protein' },
+  rajma:        { cal: 180, protein: 12, carbs: 24, fat: 4,   category: 'protein' },
+  chana:        { cal: 210, protein: 14, carbs: 28, fat: 4,   category: 'protein' },
+  sambar:       { cal: 90,  protein: 5,  carbs: 12, fat: 2,   category: 'protein' },
+  moong_dal:    { cal: 150, protein: 10, carbs: 20, fat: 2,   category: 'protein' },
+  toor_dal:     { cal: 165, protein: 11, carbs: 22, fat: 3,   category: 'protein' },
+  paneer:       { cal: 265, protein: 18, carbs: 4,  fat: 20,  category: 'protein' },
+  egg:          { cal: 70,  protein: 6,  carbs: 0,  fat: 5,   category: 'protein' },
+  chicken:      { cal: 165, protein: 31, carbs: 0,  fat: 4,   category: 'protein' },
+  fish:         { cal: 140, protein: 26, carbs: 0,  fat: 4,   category: 'protein' },
+  mutton:       { cal: 220, protein: 26, carbs: 0,  fat: 13,  category: 'protein' },
+  curd:         { cal: 60,  protein: 4,  carbs: 5,  fat: 3,   category: 'protein' },
+  raita:        { cal: 80,  protein: 4,  carbs: 7,  fat: 3,   category: 'protein' },
+  lassi:        { cal: 150, protein: 5,  carbs: 20, fat: 4,   category: 'protein' },
+  // Vegetables
+  aloo_gobi:    { cal: 130, protein: 3,  carbs: 18, fat: 5,   category: 'vegetable' },
+  bhindi:       { cal: 90,  protein: 2,  carbs: 12, fat: 3,   category: 'vegetable' },
+  palak:        { cal: 60,  protein: 3,  carbs: 6,  fat: 2,   category: 'vegetable' },
+  baingan:      { cal: 80,  protein: 2,  carbs: 10, fat: 3,   category: 'vegetable' },
+  matar:        { cal: 130, protein: 6,  carbs: 18, fat: 3,   category: 'vegetable' },
+  gobi:         { cal: 60,  protein: 2,  carbs: 8,  fat: 2,   category: 'vegetable' },
+  aloo:         { cal: 160, protein: 3,  carbs: 34, fat: 1,   category: 'vegetable' },
+  cucumber:     { cal: 15,  protein: 1,  carbs: 3,  fat: 0,   category: 'vegetable' },
+  tomato:       { cal: 22,  protein: 1,  carbs: 5,  fat: 0,   category: 'vegetable' },
+  onion:        { cal: 40,  protein: 1,  carbs: 9,  fat: 0,   category: 'vegetable' },
+  beans:        { cal: 40,  protein: 2,  carbs: 8,  fat: 0,   category: 'vegetable' },
+  broccoli:     { cal: 35,  protein: 3,  carbs: 7,  fat: 0,   category: 'vegetable' },
+  spinach:      { cal: 25,  protein: 3,  carbs: 4,  fat: 0,   category: 'vegetable' },
+  carrot:       { cal: 41,  protein: 1,  carbs: 10, fat: 0,   category: 'vegetable' },
+  // Fats/Snacks
+  ghee:         { cal: 112, protein: 0,  carbs: 0,  fat: 13,  category: 'fat' },
+  oil:          { cal: 120, protein: 0,  carbs: 0,  fat: 14,  category: 'fat' },
+  makhana:      { cal: 106, protein: 4,  carbs: 20, fat: 1,   category: 'fat' },
+  peanuts:      { cal: 170, protein: 7,  carbs: 5,  fat: 14,  category: 'fat' },
+  cashews:      { cal: 160, protein: 5,  carbs: 9,  fat: 13,  category: 'fat' },
+  coconut:      { cal: 100, protein: 1,  carbs: 5,  fat: 9,   category: 'fat' },
+  // Beverages
+  chai:         { cal: 60,  protein: 2,  carbs: 8,  fat: 2,   category: 'beverage' },
+  coffee:       { cal: 30,  protein: 1,  carbs: 4,  fat: 1,   category: 'beverage' },
+  green_tea:    { cal: 2,   protein: 0,  carbs: 0,  fat: 0,   category: 'beverage' },
+  coconut_water: { cal: 46,  protein: 2,  carbs: 9,  fat: 0,   category: 'beverage' },
+  // Sweets
+  kheer:        { cal: 180, protein: 5,  carbs: 28, fat: 6,   category: 'carb' },
+  halwa:        { cal: 250, protein: 4,  carbs: 38, fat: 10,  category: 'carb' },
+  gulab_jamun:  { cal: 150, protein: 3,  carbs: 22, fat: 6,   category: 'carb' },
+  jalebi:       { cal: 150, protein: 2,  carbs: 28, fat: 4,   category: 'carb' },
+  // Regional
+  bisi_bele_bath: { cal: 280, protein: 8, carbs: 42, fat: 8, category: 'carb' },
+  pongal:       { cal: 250, protein: 7,  carbs: 40, fat: 7,   category: 'carb' },
+  vada:         { cal: 140, protein: 4,  carbs: 18, fat: 6,   category: 'carb' },
+  chole_bhature: { cal: 450, protein: 14, carbs: 60, fat: 18, category: 'carb' },
+  pav_bhaji:    { cal: 320, protein: 7,  carbs: 48, fat: 11,  category: 'carb' },
+  thepla:       { cal: 160, protein: 4,  carbs: 22, fat: 6,   category: 'carb' },
+  dhokla:       { cal: 80,  protein: 4,  carbs: 12, fat: 2,   category: 'carb' },
+  kadhi:        { cal: 120, protein: 4,  carbs: 12, fat: 6,   category: 'protein' },
+  dal_makhani:  { cal: 220, protein: 10, carbs: 22, fat: 10,  category: 'protein' },
+  palak_paneer: { cal: 240, protein: 12, carbs: 10, fat: 18,  category: 'protein' },
+  shahi_paneer: { cal: 300, protein: 14, carbs: 12, fat: 22,  category: 'protein' },
+  chicken_curry: { cal: 200, protein: 22, carbs: 6, fat: 10,  category: 'protein' },
+  fish_curry:   { cal: 180, protein: 22, carbs: 5,  fat: 8,   category: 'protein' },
+  egg_curry:    { cal: 180, protein: 12, carbs: 6,  fat: 12,  category: 'protein' },
+};
