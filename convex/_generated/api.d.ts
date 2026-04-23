@@ -8,8 +8,10 @@
  * @module
  */
 
+import type * as ai_claude from "../ai/claude.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
+import type * as data_foodMatcher from "../data/foodMatcher.js";
 import type * as data_indianFoods from "../data/indianFoods.js";
 import type * as family from "../family.js";
 import type * as http from "../http.js";
@@ -27,8 +29,10 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "ai/claude": typeof ai_claude;
   auth: typeof auth;
   chat: typeof chat;
+  "data/foodMatcher": typeof data_foodMatcher;
   "data/indianFoods": typeof data_indianFoods;
   family: typeof family;
   http: typeof http;

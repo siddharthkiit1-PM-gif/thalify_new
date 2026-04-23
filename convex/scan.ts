@@ -2,7 +2,7 @@ import { action, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api } from "./_generated/api";
-import Anthropic from "@anthropic-ai/sdk";
+import { CLAUDE_MODEL, getClient, extractText, extractJson, classifyError, ClaudeError } from "./ai/claude";
 
 const SCAN_SYSTEM = `You are a world-class nutrition expert specializing in Indian cuisine with deep knowledge of regional Indian dishes across all 28 states.
 
@@ -18,32 +18,43 @@ Rules:
 - For thali: list each component separately (dal, sabzi, roti, rice, raita, papad, achaar)
 - Estimate calories conservatively for accuracy; use standard Indian home-cooking portions
 - Account for cooking method: ghee-fried vs steamed vs raw changes calories significantly
-- If a dish is unidentifiable: {"name": "Unidentified item", "portion": "1 serving", "cal": 150, "protein": 5, "carbs": 20, "fat": 5}
+- If a dish is truly unidentifiable: {"name": "Unidentified item", "portion": "1 serving", "cal": 150, "protein": 5, "carbs": 20, "fat": 5}
 - Return ONLY the JSON array. Zero other text.`;
 
-function extractJson(raw: string): string {
-  const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fenceMatch) return fenceMatch[1].trim();
-  const arrMatch = raw.match(/\[[\s\S]*\]/);
-  if (arrMatch) return arrMatch[0];
-  return raw.trim();
-}
+type MediaType = "image/jpeg" | "image/png" | "image/webp" | "image/gif";
+type ScanItem = { name: string; portion: string; cal: number; protein: number; carbs: number; fat: number };
 
-async function callClaude(imageBase64: string, mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif"): Promise<string> {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+async function callClaude(imageBase64: string, mediaType: MediaType): Promise<ScanItem[]> {
+  const client = getClient();
   const msg = await client.messages.create({
-    model: "claude-opus-4-7",
+    model: CLAUDE_MODEL,
     max_tokens: 2048,
+    system: SCAN_SYSTEM,
     messages: [{
       role: "user",
       content: [
         { type: "image", source: { type: "base64", media_type: mediaType, data: imageBase64 } },
-        { type: "text", text: "Analyze this Indian meal photo and return the JSON array of every dish and component you can see." }
+        { type: "text", text: "Analyze this Indian meal photo and return the JSON array of every dish you can see." }
       ]
     }],
-    system: SCAN_SYSTEM,
   });
-  return (msg.content[0] as { type: string; text: string }).text;
+  const raw = extractText(msg);
+  const items = extractJson<ScanItem[]>(raw);
+  if (!Array.isArray(items)) {
+    throw new ClaudeError("parse", "AI returned non-array response — please retry.", "Not an array");
+  }
+  return items;
+}
+
+function validateItem(item: unknown): item is ScanItem {
+  if (!item || typeof item !== "object") return false;
+  const o = item as Record<string, unknown>;
+  return typeof o.name === "string"
+    && typeof o.portion === "string"
+    && typeof o.cal === "number" && o.cal >= 0
+    && typeof o.protein === "number" && o.protein >= 0
+    && typeof o.carbs === "number" && o.carbs >= 0
+    && typeof o.fat === "number" && o.fat >= 0;
 }
 
 export const scanMeal = action({
@@ -59,42 +70,42 @@ export const scanMeal = action({
   handler: async (ctx, { imageBase64, mediaType = "image/jpeg" }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+    if (imageBase64.length < 100) throw new Error("Image data invalid — please retry.");
+    if (imageBase64.length > 10 * 1024 * 1024) throw new Error("Image too large — please use a smaller file (under 7MB).");
 
-    let raw: string;
+    let items: ScanItem[];
     try {
-      raw = await callClaude(imageBase64, mediaType);
-    } catch {
-      throw new Error("Claude API error — please retry");
-    }
-
-    let items: { name: string; portion: string; cal: number; protein: number; carbs: number; fat: number }[];
-    try {
-      items = JSON.parse(extractJson(raw));
-    } catch {
-      try {
-        raw = await callClaude(imageBase64, mediaType);
-        items = JSON.parse(extractJson(raw));
-      } catch {
-        throw new Error("Couldn't parse meal — try better lighting or a closer shot");
+      items = await callClaude(imageBase64, mediaType);
+    } catch (err) {
+      const first = classifyError(err);
+      if (first.code === "parse") {
+        try {
+          items = await callClaude(imageBase64, mediaType);
+        } catch (err2) {
+          throw new Error(classifyError(err2).userMessage);
+        }
+      } else {
+        throw new Error(first.userMessage);
       }
     }
 
-    if (!Array.isArray(items) || items.length === 0) {
-      throw new Error("No food items detected — try a clearer photo");
+    const cleaned = items.filter(validateItem);
+    if (cleaned.length === 0) {
+      throw new Error("No food detected — try better lighting or a closer shot.");
     }
 
-    const totalCal = items.reduce((acc, i) => acc + (i.cal ?? 0), 0);
-    const totalProtein = items.reduce((acc, i) => acc + (i.protein ?? 0), 0);
+    const totalCal = cleaned.reduce((sum, i) => sum + i.cal, 0);
+    const totalProtein = cleaned.reduce((sum, i) => sum + i.protein, 0);
 
     await ctx.runMutation(api.scan.saveScanResult, {
       userId,
-      items,
+      items: cleaned,
       totalCal,
       totalProtein,
       confidence: 0.92,
     });
 
-    return { items, totalCal, totalProtein };
+    return { items: cleaned, totalCal, totalProtein };
   },
 });
 

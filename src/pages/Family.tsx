@@ -23,6 +23,7 @@ export default function Family() {
   const [dishInput, setDishInput] = useState('')
   const [dishes, setDishes] = useState<string[]>([])
   const [result, setResult] = useState<OptResult[] | null>(null)
+  const [warning, setWarning] = useState<string | null>(null)
   const [optimizing, setOptimizing] = useState(false)
   const [error, setError] = useState('')
   const [logged, setLogged] = useState(false)
@@ -39,7 +40,8 @@ export default function Family() {
     setError('')
     try {
       const res = await optimizeFamily({ dishes, date: todayDate() })
-      setResult(res)
+      setResult(res.plate)
+      setWarning(res.warning)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Optimization failed — please try again.')
     } finally {
@@ -97,6 +99,7 @@ export default function Family() {
         </button>
 
         {error && <div style={{ color: '#b91c1c', padding: '12px 16px', background: '#fef2f2', borderRadius: 10, marginBottom: 16 }}>{error}</div>}
+        {warning && <div style={{ color: '#b45309', padding: '12px 16px', background: '#fffbeb', borderRadius: 10, marginBottom: 16, fontSize: 13 }}>Heads up: {warning} Showing deterministic recommendations from our Indian food database instead.</div>}
 
         {result && (
           <div className="fade-in">

@@ -2,7 +2,7 @@ import { action, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api } from "./_generated/api";
-import Anthropic from "@anthropic-ai/sdk";
+import { CLAUDE_MODEL, getClient, extractText, extractJson, classifyError } from "./ai/claude";
 
 const LAB_SYSTEM = `You are a clinical nutritionist who specializes in interpreting Indian patients' lab reports and translating results into actionable dietary guidance.
 
@@ -31,6 +31,15 @@ Status values: normal | borderline | high | low | critical
 If a value is not visible or not present in the report, omit that marker.
 Return ONLY the JSON object. No markdown, no code fences, no explanation.`;
 
+type LabResult = {
+  markers: { name: string; value: string; unit: string; status: string; range: string }[];
+  summary: string;
+  dietaryChanges: string[];
+  indianFoodRecommendations: string[];
+  urgentFlags: string[];
+  disclaimer: string;
+};
+
 export const analyzeLabReport = action({
   args: {
     imageBase64: v.string(),
@@ -44,13 +53,14 @@ export const analyzeLabReport = action({
   handler: async (ctx, { imageBase64, mediaType = "image/jpeg" }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+    if (imageBase64.length < 100) throw new Error("Image data invalid — please retry.");
+    if (imageBase64.length > 10 * 1024 * 1024) throw new Error("Image too large — please use a smaller file (under 7MB).");
 
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-    let raw: string;
+    let result: LabResult;
     try {
+      const client = getClient();
       const msg = await client.messages.create({
-        model: "claude-opus-4-7",
+        model: CLAUDE_MODEL,
         max_tokens: 2048,
         system: LAB_SYSTEM,
         messages: [{
@@ -61,29 +71,16 @@ export const analyzeLabReport = action({
           ]
         }],
       });
-      raw = (msg.content[0] as { type: string; text: string }).text;
-    } catch {
-      throw new Error("Could not analyze lab report — please retry");
+      result = extractJson<LabResult>(extractText(msg));
+    } catch (err) {
+      throw new Error(classifyError(err).userMessage);
     }
 
-    let result: {
-      markers: { name: string; value: string; unit: string; status: string; range: string }[];
-      summary: string;
-      dietaryChanges: string[];
-      indianFoodRecommendations: string[];
-      urgentFlags: string[];
-      disclaimer: string;
-    };
-
-    try {
-      const jsonStr = raw.match(/\{[\s\S]*\}/)?.[0] ?? raw;
-      result = JSON.parse(jsonStr);
-    } catch {
-      throw new Error("Could not parse lab results — try a clearer image");
+    if (!result.markers || !Array.isArray(result.markers)) {
+      throw new Error("Could not read lab values — try a clearer image of the report.");
     }
 
     await ctx.runMutation(api.lab.saveLabResult, { userId, result });
-
     return result;
   },
 });

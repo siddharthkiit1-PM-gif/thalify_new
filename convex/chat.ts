@@ -2,7 +2,9 @@ import { action, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api } from "./_generated/api";
-import Anthropic from "@anthropic-ai/sdk";
+import { CLAUDE_MODEL, getClient, extractText, classifyError } from "./ai/claude";
+
+const CHAT_MAX_MSG_LEN = 2000;
 
 export const getChatHistory = query({
   args: {},
@@ -48,6 +50,10 @@ export const chatWithCoach = action({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    const trimmed = message.trim();
+    if (trimmed.length === 0) throw new Error("Please type a message.");
+    if (trimmed.length > CHAT_MAX_MSG_LEN) throw new Error(`Message too long (max ${CHAT_MAX_MSG_LEN} characters).`);
+
     const [profile, todayLogs, history] = await Promise.all([
       ctx.runQuery(api.users.getProfile),
       ctx.runQuery(api.meals.getTodayLogs, { date: new Date().toISOString().split("T")[0] }),
@@ -64,7 +70,7 @@ export const chatWithCoach = action({
         ).join("\n")
       : "No meals logged yet today.";
 
-    const systemPrompt: string = `You are Thalify, a warm and knowledgeable personal nutrition coach specializing in Indian food and wellness.
+    const systemPrompt = `You are Thalify, a warm and knowledgeable personal nutrition coach specializing in Indian food and wellness.
 
 ## User Profile
 - Health Goal: ${profile?.goal ?? "maintain"} weight
@@ -88,7 +94,7 @@ Calories: ${totalCal} consumed / ${calorieGoal} goal (${remaining > 0 ? remainin
 - For diabetes/heart conditions: extra caution, always recommend doctor consultation
 - You have deep knowledge of regional Indian cuisines, festivals, and seasonal eating patterns`;
 
-    await ctx.runMutation(api.chat.saveMessage, { from: "user", text: message });
+    await ctx.runMutation(api.chat.saveMessage, { from: "user", text: trimmed });
 
     const recentHistory = (history as { from: string; text: string }[]).slice(-20);
     const messages: { role: "user" | "assistant"; content: string }[] = [];
@@ -98,19 +104,24 @@ Calories: ${totalCal} consumed / ${calorieGoal} goal (${remaining > 0 ? remainin
         content: msg.text,
       });
     }
-    messages.push({ role: "user", content: message });
+    messages.push({ role: "user", content: trimmed });
 
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const response = await client.messages.create({
-      model: "claude-opus-4-7",
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages,
-    });
+    let aiText: string;
+    try {
+      const client = getClient();
+      const response = await client.messages.create({
+        model: CLAUDE_MODEL,
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages,
+      });
+      aiText = extractText(response);
+    } catch (err) {
+      const classified = classifyError(err);
+      throw new Error(classified.userMessage);
+    }
 
-    const aiText: string = (response.content[0] as { type: string; text: string }).text;
     await ctx.runMutation(api.chat.saveMessage, { from: "ai", text: aiText });
-
     return aiText;
   },
 });

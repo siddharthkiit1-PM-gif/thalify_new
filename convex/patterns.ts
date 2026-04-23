@@ -1,22 +1,26 @@
 import { action } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api } from "./_generated/api";
-import Anthropic from "@anthropic-ai/sdk";
+import { CLAUDE_MODEL, getClient, extractText, extractJson, classifyError } from "./ai/claude";
+
+type PatternResult = {
+  topPatterns: string[];
+  wins: string[];
+  improvements: string[];
+  weeklyInsight: string;
+  streakMessage: string;
+};
 
 export const analyzePatterns = action({
   args: {},
-  handler: async (ctx): Promise<{
-    topPatterns: string[];
-    wins: string[];
-    improvements: string[];
-    weeklyInsight: string;
-    streakMessage: string;
-  }> => {
+  handler: async (ctx): Promise<PatternResult> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    const logs = await ctx.runQuery(api.meals.getRecentLogs);
-    const profile = await ctx.runQuery(api.users.getProfile);
+    const [logs, profile] = await Promise.all([
+      ctx.runQuery(api.meals.getRecentLogs),
+      ctx.runQuery(api.users.getProfile),
+    ]);
 
     if (!logs || logs.length === 0) {
       return {
@@ -50,17 +54,17 @@ Return ONLY the JSON object.`;
 
     const userMessage = `User goal: ${profile?.goal ?? "maintain"}\nDiet type: ${profile?.dietType ?? "veg"}\nCalorie goal: ${profile?.calorieGoal ?? 1800}/day\n\nMeal history (last 30 days):\n${logSummary}`;
 
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-    const response = await client.messages.create({
-      model: "claude-opus-4-7",
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userMessage }],
-    });
-
-    const raw = (response.content[0] as { type: string; text: string }).text;
-    const jsonStr = raw.match(/\{[\s\S]*\}/)?.[0] ?? raw;
-    return JSON.parse(jsonStr);
+    try {
+      const client = getClient();
+      const response = await client.messages.create({
+        model: CLAUDE_MODEL,
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userMessage }],
+      });
+      return extractJson<PatternResult>(extractText(response));
+    } catch (err) {
+      throw new Error(classifyError(err).userMessage);
+    }
   },
 });
