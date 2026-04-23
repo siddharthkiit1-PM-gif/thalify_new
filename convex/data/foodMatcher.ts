@@ -1,4 +1,5 @@
-import { INDIAN_FOODS, FoodEntry } from "./indianFoods";
+import { INDIAN_FOODS } from "./indianFoods";
+import type { FoodEntry } from "./indianFoods";
 
 export type FoodMatch = FoodEntry & { key: string; matched: boolean };
 
