@@ -403,3 +403,27 @@ input, textarea { font-family: inherit; color: inherit; }
   color: var(--ink-2); cursor: pointer; text-align: center;
 }
 .tweaks .opt.active { background: var(--sage-700); color: #fff; border-color: var(--sage-700); }
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .page {
+    padding: 16px;
+    grid-template-columns: 1fr !important;
+  }
+  .landing-hero {
+    grid-template-columns: 1fr !important;
+    gap: 32px;
+  }
+  .hero-preview {
+    display: none;
+  }
+  .nav-links {
+    display: none;
+  }
+  .nav-inner {
+    padding: 0 16px;
+  }
+  h1 {
+    font-size: 36px !important;
+  }
+}
