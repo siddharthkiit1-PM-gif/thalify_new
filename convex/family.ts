@@ -13,6 +13,8 @@ type OptimizedDish = {
   recommendation: string;
   cal: number;
   protein: number;
+  portion: string;
+  matched: boolean;
 };
 
 type AiAdvice = {
@@ -31,21 +33,29 @@ function baselineOptimization(
   const result: OptimizedDish[] = entries.map(({ dish, food }) => {
     let action: Action = "keep";
     let recommendation = food.matched
-      ? `Good choice — about ${food.cal} cal per serving.`
-      : `We don't recognise "${dish}" — using rough estimate.`;
+      ? `About ${food.cal} cal per ${food.portion}.`
+      : `We don't have nutrition data for "${dish}" yet — showing rough estimate.`;
 
     if ((goal === "lose" || goal === "diabetes") && food.category === "carb" && carbCount > 1) {
       action = "reduce";
-      recommendation = `Reduce to half portion to stay within your carb budget (${food.cal} cal at full portion).`;
+      recommendation = `Reduce to half portion — this meal already has ${carbCount} carb items (${food.cal} cal at full ${food.portion}).`;
     } else if (food.category === "fat" && (goal === "lose" || goal === "diabetes")) {
       action = "reduce";
-      recommendation = "Use sparingly — 1 tsp max.";
-    } else if (food.cal > 300 && goal !== "gain") {
+      recommendation = "Use sparingly — 1 tsp max at your calorie goal.";
+    } else if (food.cal > 350 && goal !== "gain") {
       action = "reduce";
-      recommendation = `High-calorie item (${food.cal} cal) — take a smaller portion.`;
+      recommendation = `High-calorie item (${food.cal} cal per ${food.portion}) — take a smaller portion.`;
     }
 
-    return { name: dish, action, recommendation, cal: food.cal, protein: food.protein };
+    return {
+      name: dish,
+      action,
+      recommendation,
+      cal: food.cal,
+      protein: food.protein,
+      portion: food.portion,
+      matched: food.matched,
+    };
   });
 
   if (proteinTotal < 20) {
@@ -56,6 +66,8 @@ function baselineOptimization(
       recommendation: "Add raita for protein and probiotics — this meal is low on protein.",
       cal: raita.cal,
       protein: raita.protein,
+      portion: raita.portion,
+      matched: true,
     });
   }
 
@@ -124,6 +136,8 @@ Refine the recommendations.`;
         recommendation: add.recommendation,
         cal: matched.cal,
         protein: matched.protein,
+        portion: matched.portion,
+        matched: matched.matched,
       });
     }
   }

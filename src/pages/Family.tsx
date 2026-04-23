@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../../convex/_generated/api'
 import Navbar from '../components/Navbar'
 
-type OptResult = { name: string; action: 'keep' | 'reduce' | 'skip' | 'add'; recommendation: string; cal: number }
+type OptResult = { name: string; action: 'keep' | 'reduce' | 'skip' | 'add'; recommendation: string; cal: number; protein: number; portion: string; matched: boolean }
 
 const ACTION_STYLE: Record<string, { color: string; bg: string; label: string }> = {
   keep:   { color: '#2D5F3A', bg: 'var(--sage-100)', label: '✓ Keep' },
@@ -120,8 +120,18 @@ export default function Family() {
                 return (
                   <div key={i} style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
                     <span style={{ padding: '3px 10px', borderRadius: 99, fontSize: 12, fontWeight: 700, color: s.color, background: s.bg, whiteSpace: 'nowrap', marginTop: 2 }}>{s.label}</span>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>{item.name} {item.cal > 0 && <span className="mono" style={{ fontSize: 12, color: 'var(--muted)' }}>· {item.cal} cal</span>}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                        <span>{item.name}</span>
+                        {item.cal > 0 && (
+                          <span className="mono" style={{ fontSize: 12, color: 'var(--muted)' }}>
+                            {item.cal} cal · {item.protein}g protein · {item.portion}
+                          </span>
+                        )}
+                        {!item.matched && item.action !== 'add' && (
+                          <span style={{ fontSize: 11, color: 'var(--muted)', fontStyle: 'italic' }}>(estimate)</span>
+                        )}
+                      </div>
                       <div style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 2 }}>{item.recommendation}</div>
                     </div>
                   </div>
