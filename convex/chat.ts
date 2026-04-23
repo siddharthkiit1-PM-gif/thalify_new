@@ -2,7 +2,7 @@ import { action, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api } from "./_generated/api";
-import { CLAUDE_MODEL, getClient, extractText, classifyError } from "./ai/claude";
+import { generateText, classifyError } from "./ai/claude";
 
 const CHAT_MAX_MSG_LEN = 2000;
 
@@ -108,17 +108,13 @@ Calories: ${totalCal} consumed / ${calorieGoal} goal (${remaining > 0 ? remainin
 
     let aiText: string;
     try {
-      const client = getClient();
-      const response = await client.messages.create({
-        model: CLAUDE_MODEL,
-        max_tokens: 1024,
+      aiText = await generateText({
         system: systemPrompt,
         messages,
+        maxTokens: 1024,
       });
-      aiText = extractText(response);
     } catch (err) {
-      const classified = classifyError(err);
-      throw new Error(classified.userMessage);
+      throw new Error(classifyError(err).userMessage);
     }
 
     await ctx.runMutation(api.chat.saveMessage, { from: "ai", text: aiText });

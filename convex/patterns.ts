@@ -1,7 +1,7 @@
 import { action } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api } from "./_generated/api";
-import { CLAUDE_MODEL, getClient, extractText, extractJson, classifyError } from "./ai/claude";
+import { generateText, extractJson, classifyError } from "./ai/claude";
 
 type PatternResult = {
   topPatterns: string[];
@@ -55,14 +55,12 @@ Return ONLY the JSON object.`;
     const userMessage = `User goal: ${profile?.goal ?? "maintain"}\nDiet type: ${profile?.dietType ?? "veg"}\nCalorie goal: ${profile?.calorieGoal ?? 1800}/day\n\nMeal history (last 30 days):\n${logSummary}`;
 
     try {
-      const client = getClient();
-      const response = await client.messages.create({
-        model: CLAUDE_MODEL,
-        max_tokens: 1024,
+      const raw = await generateText({
         system: systemPrompt,
         messages: [{ role: "user", content: userMessage }],
+        maxTokens: 1024,
       });
-      return extractJson<PatternResult>(extractText(response));
+      return extractJson<PatternResult>(raw);
     } catch (err) {
       throw new Error(classifyError(err).userMessage);
     }

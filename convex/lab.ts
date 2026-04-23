@@ -2,7 +2,7 @@ import { action, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api } from "./_generated/api";
-import { CLAUDE_MODEL, getClient, extractText, extractJson, classifyError } from "./ai/claude";
+import { generateFromImage, extractJson, classifyError } from "./ai/claude";
 
 const LAB_SYSTEM = `You are a clinical nutritionist who specializes in interpreting Indian patients' lab reports and translating results into actionable dietary guidance.
 
@@ -58,20 +58,14 @@ export const analyzeLabReport = action({
 
     let result: LabResult;
     try {
-      const client = getClient();
-      const msg = await client.messages.create({
-        model: CLAUDE_MODEL,
-        max_tokens: 2048,
+      const raw = await generateFromImage({
         system: LAB_SYSTEM,
-        messages: [{
-          role: "user",
-          content: [
-            { type: "image", source: { type: "base64", media_type: mediaType, data: imageBase64 } },
-            { type: "text", text: "Analyze this lab report and return the JSON with markers, dietary recommendations, and Indian food suggestions." }
-          ]
-        }],
+        imageBase64,
+        mediaType,
+        userPrompt: "Analyze this lab report and return the JSON with markers, dietary recommendations, and Indian food suggestions.",
+        maxTokens: 2048,
       });
-      result = extractJson<LabResult>(extractText(msg));
+      result = extractJson<LabResult>(raw);
     } catch (err) {
       throw new Error(classifyError(err).userMessage);
     }

@@ -2,7 +2,7 @@ import { action, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api } from "./_generated/api";
-import { CLAUDE_MODEL, getClient, extractText, extractJson, classifyError, ClaudeError } from "./ai/claude";
+import { generateFromImage, extractJson, classifyError, AiError } from "./ai/claude";
 
 const SCAN_SYSTEM = `You are a world-class nutrition expert specializing in Indian cuisine with deep knowledge of regional Indian dishes across all 28 states.
 
@@ -14,7 +14,7 @@ Each item must follow this exact shape:
 Rules:
 - Identify every visible dish, condiment, and drink separately
 - Use authentic Indian portion terms: katori (150ml bowl), plate, roti/chapati (per piece), cup (240ml), piece, bowl, glass
-- Recognize regional names: poha/aval, uttapam, pesarattu, bisi bele bath, appam, puttu, litti chokha, dal baati churma, thepla, dhokla, etc.
+- Recognize regional names: poha/aval, uttapam, pesarattu, bisi bele bath, appam, puttu, litti chokha, dal baati churma, thepla, dhokla
 - For thali: list each component separately (dal, sabzi, roti, rice, raita, papad, achaar)
 - Estimate calories conservatively for accuracy; use standard Indian home-cooking portions
 - Account for cooking method: ghee-fried vs steamed vs raw changes calories significantly
@@ -23,28 +23,6 @@ Rules:
 
 type MediaType = "image/jpeg" | "image/png" | "image/webp" | "image/gif";
 type ScanItem = { name: string; portion: string; cal: number; protein: number; carbs: number; fat: number };
-
-async function callClaude(imageBase64: string, mediaType: MediaType): Promise<ScanItem[]> {
-  const client = getClient();
-  const msg = await client.messages.create({
-    model: CLAUDE_MODEL,
-    max_tokens: 2048,
-    system: SCAN_SYSTEM,
-    messages: [{
-      role: "user",
-      content: [
-        { type: "image", source: { type: "base64", media_type: mediaType, data: imageBase64 } },
-        { type: "text", text: "Analyze this Indian meal photo and return the JSON array of every dish you can see." }
-      ]
-    }],
-  });
-  const raw = extractText(msg);
-  const items = extractJson<ScanItem[]>(raw);
-  if (!Array.isArray(items)) {
-    throw new ClaudeError("parse", "AI returned non-array response — please retry.", "Not an array");
-  }
-  return items;
-}
 
 function validateItem(item: unknown): item is ScanItem {
   if (!item || typeof item !== "object") return false;
@@ -55,6 +33,21 @@ function validateItem(item: unknown): item is ScanItem {
     && typeof o.protein === "number" && o.protein >= 0
     && typeof o.carbs === "number" && o.carbs >= 0
     && typeof o.fat === "number" && o.fat >= 0;
+}
+
+async function scan(imageBase64: string, mediaType: MediaType): Promise<ScanItem[]> {
+  const raw = await generateFromImage({
+    system: SCAN_SYSTEM,
+    imageBase64,
+    mediaType,
+    userPrompt: "Analyze this Indian meal photo and return the JSON array of every dish you can see.",
+    maxTokens: 2048,
+  });
+  const items = extractJson<ScanItem[]>(raw);
+  if (!Array.isArray(items)) {
+    throw new AiError("parse", "AI returned non-array response — please retry.", "Not an array");
+  }
+  return items;
 }
 
 export const scanMeal = action({
@@ -75,12 +68,12 @@ export const scanMeal = action({
 
     let items: ScanItem[];
     try {
-      items = await callClaude(imageBase64, mediaType);
+      items = await scan(imageBase64, mediaType);
     } catch (err) {
       const first = classifyError(err);
       if (first.code === "parse") {
         try {
-          items = await callClaude(imageBase64, mediaType);
+          items = await scan(imageBase64, mediaType);
         } catch (err2) {
           throw new Error(classifyError(err2).userMessage);
         }
@@ -102,7 +95,7 @@ export const scanMeal = action({
       items: cleaned,
       totalCal,
       totalProtein,
-      confidence: 0.92,
+      confidence: 0.9,
     });
 
     return { items: cleaned, totalCal, totalProtein };

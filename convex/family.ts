@@ -2,7 +2,7 @@ import { action, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api } from "./_generated/api";
-import { CLAUDE_MODEL, getClient, extractText, extractJson, classifyError } from "./ai/claude";
+import { generateText, extractJson, classifyError } from "./ai/claude";
 import { matchDish } from "./data/foodMatcher";
 
 type Action = "keep" | "reduce" | "skip" | "add";
@@ -97,15 +97,13 @@ ${baselineSummary}
 
 Refine the recommendations.`;
 
-  const client = getClient();
-  const response = await client.messages.create({
-    model: CLAUDE_MODEL,
-    max_tokens: 1024,
+  const raw = await generateText({
     system: systemPrompt,
     messages: [{ role: "user", content: userMessage }],
+    maxTokens: 1024,
   });
 
-  const advice = extractJson<AiAdvice>(extractText(response));
+  const advice = extractJson<AiAdvice>(raw);
 
   const byName = new Map(baseline.map(d => [d.name.toLowerCase(), d]));
   const enriched: OptimizedDish[] = baseline.map(d => {
