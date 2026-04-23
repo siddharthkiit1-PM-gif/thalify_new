@@ -1,14 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthActions } from '@convex-dev/auth/react'
-import { useConvexAuth } from 'convex/react'
+import { useConvexAuth, useQuery } from 'convex/react'
+import { api } from '../../convex/_generated/api'
 
 type Tab = 'login' | 'register'
 
 export default function Auth() {
   const navigate = useNavigate()
   const { signIn } = useAuthActions()
-  const { isAuthenticated } = useConvexAuth()
+  const { isAuthenticated, isLoading: authLoading } = useConvexAuth()
+  const profile = useQuery(api.users.getProfile)
   const [tab, setTab] = useState<Tab>('register')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -16,10 +18,16 @@ export default function Auth() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  if (isAuthenticated) {
-    navigate('/dashboard')
-    return null
-  }
+  useEffect(() => {
+    if (authLoading) return
+    if (!isAuthenticated) return
+    if (profile === undefined) return
+    if (!profile || !profile.onboardingComplete) {
+      navigate('/onboarding', { replace: true })
+    } else {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [authLoading, isAuthenticated, profile, navigate])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -29,21 +37,18 @@ export default function Auth() {
     try {
       if (tab === 'register') {
         await signIn('password', { name, email, password, flow: 'signUp' })
-        navigate('/onboarding')
       } else {
         await signIn('password', { email, password, flow: 'signIn' })
-        navigate('/dashboard')
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       if (tab === 'login') {
         setError('Incorrect email or password')
-      } else if (msg.toLowerCase().includes('exists') || msg.toLowerCase().includes('duplicate')) {
+      } else if (msg.toLowerCase().includes('exists') || msg.toLowerCase().includes('duplicate') || msg.toLowerCase().includes('already')) {
         setError('An account with this email already exists — try Login instead')
       } else {
         setError(msg || 'Registration failed — please try again')
       }
-    } finally {
       setLoading(false)
     }
   }
@@ -91,8 +96,8 @@ export default function Auth() {
             </div>
           )}
 
-          <button type="submit" className="btn btn-primary" disabled={loading} style={{ marginTop: 4 }}>
-            {loading ? 'Please wait…' : tab === 'login' ? 'Sign In' : 'Create Account'}
+          <button type="submit" className="btn btn-primary" disabled={loading || isAuthenticated} style={{ marginTop: 4 }}>
+            {loading || isAuthenticated ? 'Please wait…' : tab === 'login' ? 'Sign In' : 'Create Account'}
           </button>
         </form>
       </div>
