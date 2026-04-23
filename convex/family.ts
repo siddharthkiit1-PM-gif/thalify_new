@@ -2,70 +2,75 @@ import { action, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api } from "./_generated/api";
-import { INDIAN_FOODS } from "./data/indianFoods";
+import Anthropic from "@anthropic-ai/sdk";
 
-type Goal = "lose" | "maintain" | "diabetes" | "gain";
-
-function buildOptimizedPlate(
-  dishes: string[],
-  goal: Goal,
-) {
-  const result: { name: string; action: "keep" | "reduce" | "skip" | "add"; recommendation: string; cal: number }[] = [];
-
-  let carbCount = 0;
-  let totalProtein = 0;
-  const entries: { dish: string; food: typeof INDIAN_FOODS[string] | null }[] = [];
-
-  for (const dish of dishes) {
-    const key = dish.toLowerCase().replace(/ /g, "_");
-    const food = INDIAN_FOODS[key] ?? null;
-    if (food?.category === "carb") carbCount++;
-    if (food) totalProtein += food.protein;
-    entries.push({ dish, food });
-  }
-
-  for (const { dish, food } of entries) {
-    if (!food) {
-      result.push({ name: dish, action: "keep", recommendation: `We don't recognise "${dish}" yet — keeping as-is.`, cal: 0 });
-      continue;
-    }
-    let action: "keep" | "reduce" | "skip" = "keep";
-    let recommendation = "Good choice — keep this.";
-
-    if ((goal === "lose" || goal === "diabetes") && food.category === "carb" && carbCount > 1) {
-      action = "reduce";
-      recommendation = "Reduce to half portion to stay within your carb limit.";
-    } else if (food.category === "fat" && goal === "lose") {
-      action = "reduce";
-      recommendation = "Use sparingly — 1 tsp max.";
-    } else if (food.cal > 300 && goal === "diabetes") {
-      action = "reduce";
-      recommendation = "High-calorie item — take a smaller portion.";
-    }
-
-    result.push({ name: dish, action, recommendation, cal: food.cal });
-  }
-
-  if (totalProtein < 20) {
-    result.push({ name: "Cucumber Raita", action: "add", recommendation: "Add raita for protein and probiotics.", cal: INDIAN_FOODS["raita"].cal });
-  }
-
-  return result;
-}
+type OptimizedDish = {
+  name: string;
+  action: "keep" | "reduce" | "skip" | "add";
+  recommendation: string;
+  cal: number;
+};
 
 export const optimizeFamily = action({
   args: {
     dishes: v.array(v.string()),
     date: v.string(),
   },
-  handler: async (ctx, { dishes, date }) => {
+  handler: async (ctx, { dishes, date }): Promise<OptimizedDish[]> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
     const profile = await ctx.runQuery(api.users.getProfile);
-    const goal = (profile?.goal ?? "maintain") as Goal;
+    const goal = profile?.goal ?? "maintain";
+    const dietType = profile?.dietType ?? "veg";
+    const dislikes = profile?.dislikes?.join(", ") || "none";
 
-    const optimizedPlate = buildOptimizedPlate(dishes, goal);
+    const systemPrompt = `You are a senior clinical nutritionist specializing in Indian family meal planning.
+
+Given a list of Indian dishes for a family meal, analyze each dish and provide optimization recommendations.
+
+Return ONLY a valid JSON array. Each dish gets one object with:
+{"name": "dish name", "action": "keep|reduce|skip|add", "recommendation": "specific 1-sentence advice", "cal": estimated_calories_per_serving}
+
+For "add" items, recommend 1-2 additions that complement the meal nutritionally.
+
+Action rules:
+- "keep": dish is appropriate for the health goal
+- "reduce": eat half portion or less
+- "skip": avoid entirely or swap for better option
+- "add": suggest a missing nutritional element
+
+Return ONLY the JSON array. No markdown, no code fences, no explanation.`;
+
+    const userMessage = `Family meal dishes: ${dishes.join(", ")}
+
+User health goal: ${goal}
+Diet type: ${dietType}
+Food dislikes: ${dislikes}
+
+Analyze each dish and provide optimization recommendations for this Indian family meal. Also suggest 1-2 additions if the meal lacks protein, fiber, or probiotics.`;
+
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    let optimizedPlate: OptimizedDish[];
+    try {
+      const response = await client.messages.create({
+        model: "claude-opus-4-7",
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userMessage }],
+      });
+      const raw = (response.content[0] as { type: string; text: string }).text;
+      const jsonStr = raw.match(/\[[\s\S]*\]/)?.[0] ?? raw;
+      optimizedPlate = JSON.parse(jsonStr) as OptimizedDish[];
+    } catch {
+      optimizedPlate = dishes.map(dish => ({
+        name: dish,
+        action: "keep" as const,
+        recommendation: "Good choice for your meal.",
+        cal: 200,
+      }));
+    }
 
     await ctx.runMutation(api.family.saveFamilyMenu, { date, dishes, optimizedPlate });
 

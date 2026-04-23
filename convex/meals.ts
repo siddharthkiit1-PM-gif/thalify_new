@@ -41,6 +41,6 @@ export const getRecentLogs = query({
       .query("mealLogs")
       .withIndex("by_userId_date", q => q.eq("userId", userId))
       .order("desc")
-      .take(10);
+      .take(90);
   },
 });

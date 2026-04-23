@@ -46,6 +46,7 @@ export default defineSchema({
       fat: v.number(),
     })),
     totalCal: v.number(),
+    totalProtein: v.optional(v.number()),
     createdAt: v.number(),
   }).index("by_userId", ["userId"]),
 
@@ -66,6 +67,25 @@ export default defineSchema({
       recommendation: v.string(),
       cal: v.number(),
     })),
+  }).index("by_userId", ["userId"]),
+
+  labResults: defineTable({
+    userId: v.id("users"),
+    result: v.object({
+      markers: v.array(v.object({
+        name: v.string(),
+        value: v.string(),
+        unit: v.string(),
+        status: v.string(),
+        range: v.string(),
+      })),
+      summary: v.string(),
+      dietaryChanges: v.array(v.string()),
+      indianFoodRecommendations: v.array(v.string()),
+      urgentFlags: v.array(v.string()),
+      disclaimer: v.string(),
+    }),
+    createdAt: v.number(),
   }).index("by_userId", ["userId"]),
 
   waitlist: defineTable({
