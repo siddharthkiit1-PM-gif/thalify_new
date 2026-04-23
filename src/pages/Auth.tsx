@@ -16,9 +16,10 @@ export default function Auth() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
+    if (!submitted && !isAuthenticated) return
     if (authLoading) return
     if (!isAuthenticated) return
     if (profile === undefined) return
@@ -27,13 +28,13 @@ export default function Auth() {
     } else {
       navigate('/dashboard', { replace: true })
     }
-  }, [authLoading, isAuthenticated, profile, navigate])
+  }, [submitted, authLoading, isAuthenticated, profile, navigate])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     if (password.length < 8) { setError('Password must be at least 8 characters'); return }
-    setLoading(true)
+    setSubmitted(true)
     try {
       if (tab === 'register') {
         await signIn('password', { name, email, password, flow: 'signUp' })
@@ -47,11 +48,13 @@ export default function Auth() {
       } else if (msg.toLowerCase().includes('exists') || msg.toLowerCase().includes('duplicate') || msg.toLowerCase().includes('already')) {
         setError('An account with this email already exists — try Login instead')
       } else {
-        setError(msg || 'Registration failed — please try again')
+        setError(msg || 'Sign in failed — please try again')
       }
-      setLoading(false)
+      setSubmitted(false)
     }
   }
+
+  const showLoading = submitted && !error
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--cream)' }}>
@@ -68,6 +71,7 @@ export default function Auth() {
               onClick={() => { setTab(t); setError('') }}
               className={tab === t ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'}
               style={{ flex: 1 }}
+              disabled={showLoading}
             >
               {t === 'login' ? 'Login' : 'Register'}
             </button>
@@ -96,9 +100,15 @@ export default function Auth() {
             </div>
           )}
 
-          <button type="submit" className="btn btn-primary" disabled={loading || isAuthenticated} style={{ marginTop: 4 }}>
-            {loading || isAuthenticated ? 'Please wait…' : tab === 'login' ? 'Sign In' : 'Create Account'}
+          <button type="submit" className="btn btn-primary" disabled={showLoading} style={{ marginTop: 4 }}>
+            {showLoading ? (tab === 'register' ? 'Creating account…' : 'Signing in…') : (tab === 'login' ? 'Sign In' : 'Create Account')}
           </button>
+
+          {showLoading && isAuthenticated && profile === undefined && (
+            <div style={{ color: 'var(--muted)', fontSize: 12, textAlign: 'center', marginTop: 4 }}>
+              Loading your account…
+            </div>
+          )}
         </form>
       </div>
     </div>
