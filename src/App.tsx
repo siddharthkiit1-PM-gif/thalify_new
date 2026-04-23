@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import OfflineToast from './components/OfflineToast'
 import Waitlist from './pages/Waitlist'
 import Auth from './pages/Auth'
 import Onboarding from './pages/Onboarding'
@@ -12,6 +13,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
   return (
+    <>
     <Routes>
       <Route path="/" element={<Waitlist />} />
       <Route path="/waitlist" element={<Waitlist />} />
@@ -53,5 +55,7 @@ export default function App() {
       } />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    <OfflineToast />
+    </>
   )
 }
