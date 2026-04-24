@@ -58,6 +58,7 @@ export const createProfile = mutation({
     city: v.union(v.literal("bangalore"), v.literal("mumbai"), v.literal("delhi"), v.literal("other")),
     allergies: v.array(v.string()),
     dislikes: v.array(v.string()),
+    allowPhotoStorage: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);

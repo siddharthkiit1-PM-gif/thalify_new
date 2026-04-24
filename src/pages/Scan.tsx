@@ -25,6 +25,11 @@ export default function Scan() {
   const recordScanFeedback = useMutation(api.scanFeedback.recordScanFeedback)
   const logMeal = useMutation(api.meals.logMeal)
   const recentScans = useQuery(api.meals.getRecentLogs)
+  const profile = useQuery(api.users.getProfile)
+  const setPhotoStorage = useMutation(api.users.setPhotoStoragePreference)
+  // If the user registered before we added the consent step, allowPhotoStorage
+  // is undefined and we surface an explicit banner before letting them scan.
+  const needsPhotoConsent = profile !== undefined && profile !== null && profile.allowPhotoStorage === undefined
 
   const [phase, setPhase] = useState<'upload' | 'scanning' | 'result' | 'logged'>('upload')
   const [items, setItems] = useState<ScanItem[]>([])
@@ -130,7 +135,32 @@ export default function Scan() {
         <h1 className="serif" style={{ fontSize: 32, marginBottom: 4 }}>Scan Meal</h1>
         <p style={{ color: 'var(--muted)', marginBottom: 24 }}>Photo to calories in 3 seconds · Edit anything that looks off</p>
 
-        {phase === 'upload' && (
+        {phase === 'upload' && needsPhotoConsent && (
+          <div style={{ background: 'var(--sand)', border: '2px solid var(--sage-700)', borderRadius: 16, padding: 22, marginBottom: 16 }}>
+            <div style={{ fontSize: 22, marginBottom: 8 }}>📸</div>
+            <div className="serif" style={{ fontSize: 20, marginBottom: 8 }}>Before your first scan</div>
+            <p style={{ fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.55, marginBottom: 16 }}>
+              We can keep your meal photo to improve how accurately Thalify identifies Indian food over time. Your choice — change it anytime from the profile menu.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => setPhotoStorage({ allow: true }).catch(console.error)}
+              >Yes, keep photos</button>
+              <button
+                className="btn btn-secondary"
+                style={{ flex: 1 }}
+                onClick={() => setPhotoStorage({ allow: false }).catch(console.error)}
+              >No, delete after scan</button>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 10, lineHeight: 1.5 }}>
+              Stored securely, never shared with third parties. Used only to make scan recognition better.
+            </div>
+          </div>
+        )}
+
+        {phase === 'upload' && !needsPhotoConsent && (
           <>
             <div
               onDrop={handleDrop}
@@ -145,7 +175,12 @@ export default function Scan() {
               <input id="file-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
             </div>
             <div style={{ marginTop: 14, fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
-              💡 <b>Pro tip:</b> include a spoon or coin in the shot for more accurate portion estimation. We keep your photo to improve recognition — turn off in settings anytime.
+              💡 <b>Pro tip:</b> include a spoon or coin in the shot for more accurate portion estimation.{' '}
+              {profile?.allowPhotoStorage === false ? (
+                <>🔒 Photos discarded after scan (your setting).</>
+              ) : (
+                <>We keep your photo to improve recognition — change in profile menu.</>
+              )}
             </div>
           </>
         )}
