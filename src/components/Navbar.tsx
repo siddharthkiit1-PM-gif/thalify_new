@@ -7,7 +7,7 @@ import { api } from '../../convex/_generated/api'
 const LINKS = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'scan', label: 'Scan Meal' },
-  { id: 'chat', label: 'AI Coach' },
+  { id: 'chat', label: 'Health Buddy' },
   { id: 'family', label: 'Family Meal' },
   { id: 'lab', label: 'Lab Reports' },
   { id: 'patterns', label: 'Patterns' },

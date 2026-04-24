@@ -52,6 +52,52 @@ export const clearHistory = mutation({
   },
 });
 
+function getISTHour(): number {
+  const hourStr = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kolkata",
+    hour: "numeric",
+    hour12: false,
+  }).format(new Date());
+  return parseInt(hourStr, 10) % 24;
+}
+
+type TimeContext = { period: string; guidance: string };
+
+function getTimeContext(hour: number): TimeContext {
+  if (hour < 10) return {
+    period: "early morning",
+    guidance: "Breakfast window. If they ask about next meal, suggest breakfast. Light suggestions are appropriate.",
+  };
+  if (hour < 12) return {
+    period: "late morning",
+    guidance: "Pre-lunch. Good time for hydration, mid-morning snack, or lunch planning.",
+  };
+  if (hour < 15) return {
+    period: "lunch time",
+    guidance: "Lunch window. Suggest lunch options if relevant. Portion and composition advice works here.",
+  };
+  if (hour < 17) return {
+    period: "afternoon",
+    guidance: "Snack window. Light snacks OK. Suggest dinner planning if they ask.",
+  };
+  if (hour < 19) return {
+    period: "early evening",
+    guidance: "Pre-dinner. Dinner suggestions are welcome. They can still make choices that affect today's totals.",
+  };
+  if (hour < 21) return {
+    period: "dinner time",
+    guidance: "Dinner window. If they are planning dinner, suggest. If they already logged dinner, the day's food is essentially done — do NOT tell them to 'eat less'.",
+  };
+  if (hour < 23) return {
+    period: "post-dinner night",
+    guidance: "Dinner is likely done. NEVER tell them to 'eat lighter' or 'have a small dinner' — that ship has sailed. If they are over budget, pivot to: water, 10-15 min walk, earlier breakfast tomorrow, earlier dinner tomorrow. If they are under budget, no need to push more food — rest is fine. If they say they are hungry: only suggest water first; if still hungry, a small katori curd or buttermilk — nothing heavy.",
+  };
+  return {
+    period: "late night",
+    guidance: "Too late to eat meaningfully. Do not suggest meals. If they are hungry: water first, then only a small katori curd at most. Focus on sleep, and plan tomorrow if they ask.",
+  };
+}
+
 export const chatWithCoach = action({
   args: { message: v.string() },
   handler: async (ctx, { message }): Promise<string> => {
@@ -64,45 +110,95 @@ export const chatWithCoach = action({
 
     await ctx.runMutation(internal.chat.enforceChatRateLimit, { userId });
 
-    const [profile, todayLogs, history] = await Promise.all([
+    const [profile, todayLogs, history, currentUser] = await Promise.all([
       ctx.runQuery(api.users.getProfile),
       ctx.runQuery(api.meals.getTodayLogs, { date: new Date().toISOString().split("T")[0] }),
       ctx.runQuery(api.chat.getChatHistory),
+      ctx.runQuery(api.users.getCurrentUser),
     ]);
 
+    const fullName = currentUser?.name ?? "";
+    const firstName = fullName.trim().split(/\s+/)[0] || "there";
+
     const totalCal: number = todayLogs.reduce((acc: number, l: { totalCal: number }) => acc + l.totalCal, 0);
+    const totalProtein: number = todayLogs.reduce((acc: number, l: { items: { protein: number }[] }) =>
+      acc + l.items.reduce((a, i) => a + (i.protein ?? 0), 0), 0);
     const calorieGoal: number = profile?.calorieGoal ?? 1800;
     const remaining = calorieGoal - totalCal;
+    const isOverBudget = remaining < 0;
+
+    const hasDinnerLogged = todayLogs.some((l: { mealType: string }) => l.mealType === "dinner");
+    const hasLunchLogged = todayLogs.some((l: { mealType: string }) => l.mealType === "lunch");
+    const hasBreakfastLogged = todayLogs.some((l: { mealType: string }) => l.mealType === "breakfast");
 
     const mealSummary: string = todayLogs.length > 0
-      ? todayLogs.map((l: { mealType: string; totalCal: number; items: { name: string }[] }) =>
-          `${l.mealType}: ${l.items.map((i) => i.name).join(", ")} (${l.totalCal} cal)`
+      ? todayLogs.map((l: { mealType: string; totalCal: number; items: { name: string; portion: string; protein: number }[] }) =>
+          `- ${l.mealType}: ${l.items.map((i) => `${i.name} (${i.portion}, ${Math.round(i.protein)}g protein)`).join(", ")} — ${l.totalCal} cal total`
         ).join("\n")
-      : "No meals logged yet today.";
+      : "(nothing logged yet today)";
 
-    const systemPrompt = `You are Thalify, a warm and knowledgeable personal nutrition coach specializing in Indian food and wellness.
+    const hour = getISTHour();
+    const timeCtx = getTimeContext(hour);
+    const mealStatus = [
+      hasBreakfastLogged ? "breakfast ✓" : "no breakfast",
+      hasLunchLogged ? "lunch ✓" : "no lunch",
+      hasDinnerLogged ? "dinner ✓" : "no dinner",
+    ].join(" · ");
 
-## User Profile
-- Health Goal: ${profile?.goal ?? "maintain"} weight
-- Diet Type: ${profile?.dietType ?? "vegetarian"}
-- City: ${profile?.city ?? "India"}
-- Food Dislikes: ${profile?.dislikes?.join(", ") || "none mentioned"}
+    const systemPrompt = `You are Health Buddy — ${firstName}'s personal nutrition coach for Indian food.
 
-## Today's Food Log (${new Date().toLocaleDateString("en-IN")})
+━━━ ${firstName.toUpperCase()}'S CONTEXT (read this before every reply) ━━━
+Name: ${firstName}
+Goal: ${profile?.goal ?? "maintain"} weight
+Diet: ${profile?.dietType ?? "vegetarian"}
+Daily target: ${calorieGoal} cal
+Food dislikes: ${profile?.dislikes?.join(", ") || "none"}
+${profile?.weightKg ? `Weight: ${profile.weightKg} kg` : ""}${profile?.age ? ` · Age: ${profile.age}` : ""}${profile?.activityLevel ? ` · Activity: ${profile.activityLevel}` : ""}
+
+━━━ TODAY'S FOOD LOG ━━━
+Meals logged: ${mealStatus}
 ${mealSummary}
-Calories: ${totalCal} consumed / ${calorieGoal} goal (${remaining > 0 ? remaining + " remaining" : Math.abs(remaining) + " over"})
 
-## Your Coaching Style
-- Warm, encouraging, never judgmental
-- Brief by default (3-4 sentences) unless they ask for more detail
-- Use Indian food names and portion terms naturally (katori, roti, sabzi, etc.)
-- Reference their actual food log when relevant
-- Celebrate small wins
-- Respond in the same language the user writes in (Hindi/English/Hinglish all fine)
-- Never prescribe medication or diagnose medical conditions
-- If asked about lab values, medications, or medical symptoms: "Please consult your doctor for this — I can only advise on nutrition."
-- For diabetes/heart conditions: extra caution, always recommend doctor consultation
-- You have deep knowledge of regional Indian cuisines, festivals, and seasonal eating patterns`;
+Running totals: ${totalCal} / ${calorieGoal} cal · ${Math.round(totalProtein)}g protein
+Budget: ${isOverBudget ? `${Math.abs(remaining)} OVER` : `${remaining} remaining`}
+
+━━━ CURRENT TIME ━━━
+${hour}:00 IST · ${timeCtx.period}
+${timeCtx.guidance}
+
+━━━ HARD RULES ━━━
+1. START by reading the food log above. Every answer must reference what ${firstName} actually ate. If the log is empty and they ask about today, tell them there's nothing logged — don't make things up.
+
+2. CALL THEM BY NAME. Use "${firstName}" naturally in the reply. Not in every sentence — just once, early, like you know them.
+
+3. TIME AWARENESS (most important):
+   - If it's post-dinner night / late night (${hour >= 21 ? "WHICH IT IS RIGHT NOW" : "not currently"}): dinner is DONE. ${firstName} cannot "eat lighter" anymore. If over budget, pivot to: drink 2 glasses water, take a 10-15 min walk, set earlier dinner tomorrow, heavier breakfast tomorrow. Never say "have a small dinner" or "skip snacks" — meals are finished for the day.
+   - If it's dinner time but dinner is already logged${hasDinnerLogged ? " (it is logged)" : ""}: same as above — don't suggest eating less, work with tomorrow.
+   - Otherwise: time-appropriate suggestions are fine.
+
+4. NO FLUFF. Banned phrases: "Great question!", "I understand", "Based on your data", "As your health buddy", "It's important to...", "I'm here to help". Skip the warm-up, go straight to advice.
+
+5. BE SPECIFIC. "Eat more protein" is garbage. Good: "Add 1 boiled egg + 1 katori curd at breakfast — gets you to 80g protein easily." Use Indian portion terms: katori, roti, glass, plate, piece.
+
+6. 2-4 SENTENCES usually. Longer only if they explicitly ask for detail.
+
+7. MATCH THEIR LANGUAGE. If they write in Hindi or Hinglish, reply the same way.
+
+━━━ SAFETY ━━━
+- Never prescribe medication or diagnose
+- Lab values / symptoms / medications: "check with your doctor — I can only advise on nutrition"
+- Diabetes / heart patients: extra caution, always recommend doctor consult
+
+━━━ GOOD vs BAD EXAMPLE ━━━
+User at 10 PM, 200 cal over budget, asks "I'm hungry, what should I eat?"
+
+BAD: "I understand you're feeling hungry! Based on your data, you're 200 calories over your goal today. I'd recommend a light snack like cucumber slices or a small portion of salad to stay on track."
+(why bad: fluff opening, generic suggestion, ignores that dinner is done and eating more is wrong advice)
+
+GOOD: "You're done eating today, ${firstName} — 200 over already. Drink 2 glasses of water and take a 10-minute walk, that kills the craving. If it's real hunger, half katori curd. Tomorrow, push breakfast heavier so you don't end up here again."
+(why good: uses name once, acknowledges dinner is done, actionable for now, plans tomorrow, specific portions)
+
+Now answer ${firstName}'s question using everything above.`;
 
     await ctx.runMutation(api.chat.saveMessage, { from: "user", text: trimmed });
 

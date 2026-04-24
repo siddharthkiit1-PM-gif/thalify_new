@@ -4,7 +4,15 @@ import { api } from '../../convex/_generated/api'
 import Navbar from '../components/Navbar'
 import Progress from '../components/ui/Progress'
 
-const CHIPS = ['My progress today', "Tonight's dinner idea", 'Low-calorie snack', 'Water target']
+function getChips(): string[] {
+  const hour = new Date().getHours()
+  if (hour < 11) return ['Breakfast ideas', 'Protein-rich start', 'My targets today', 'Water target']
+  if (hour < 15) return ['Lunch suggestion', 'My progress today', 'Low-calorie snack', 'Water target']
+  if (hour < 19) return ['Snack ideas', "Tonight's dinner idea", 'My progress today', 'Water target']
+  if (hour < 21) return ["Tonight's dinner idea", 'Post-dinner walk plan', 'My progress today', 'Water target']
+  return ['How did I do today?', 'Plan tomorrow', 'I feel hungry — what now?', 'Water target']
+}
+const CHIPS_DEFAULT = getChips()
 
 export default function Chat() {
   const messages = useQuery(api.chat.getChatHistory)
@@ -46,7 +54,7 @@ export default function Chat() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 0', borderBottom: '1px solid var(--border)', marginBottom: 16 }}>
             <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--sage-100)', display: 'grid', placeItems: 'center', fontSize: 20 }}>🧠</div>
             <div>
-              <div style={{ fontWeight: 700 }}>Your AI Coach</div>
+              <div style={{ fontWeight: 700 }}>Your Health Buddy</div>
               <div style={{ fontSize: 12, color: 'var(--sage-700)', display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span className="online-dot" /> Online · Responds instantly
               </div>
@@ -85,7 +93,7 @@ export default function Chat() {
 
           {/* Chips */}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingTop: 12 }}>
-            {CHIPS.map(chip => (
+            {CHIPS_DEFAULT.map(chip => (
               <div key={chip} onClick={() => send(chip)} style={{ padding: '6px 14px', borderRadius: 99, fontSize: 12.5, background: 'var(--sand)', border: '1px solid var(--border)', cursor: 'pointer' }}>
                 {chip}
               </div>
