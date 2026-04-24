@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { sendEmail, waitlistWelcomeHtml, EmailError } from "./email";
 
-const LAUNCH_DATE = "Friday, 25 April at 9:00 AM IST";
+const APP_URL = process.env.APP_URL ?? "https://n-beta-flame.vercel.app";
 
 export const alreadyJoined = query({
   args: { email: v.string() },
@@ -62,8 +62,8 @@ export const joinWaitlist = action({
     try {
       await sendEmail({
         to: { email: normalized },
-        subject: `You're on the Thalify waitlist — seat #${position}`,
-        html: waitlistWelcomeHtml({ email: normalized, position, launchDate: LAUNCH_DATE }),
+        subject: `Your Thalify early access is ready — seat #${position}`,
+        html: waitlistWelcomeHtml({ email: normalized, position, appUrl: APP_URL }),
       });
       emailSent = true;
     } catch (err) {

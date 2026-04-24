@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { useConvexAuth, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
@@ -8,12 +8,15 @@ type Tab = 'login' | 'register'
 
 export default function Auth() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const prefilledEmail = searchParams.get('email') ?? ''
+  const isFromWaitlist = searchParams.get('ref') === 'waitlist'
   const { signIn } = useAuthActions()
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth()
   const profile = useQuery(api.users.getProfile)
   const [tab, setTab] = useState<Tab>('register')
   const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(prefilledEmail)
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitted, setSubmitted] = useState(false)
@@ -59,12 +62,19 @@ export default function Auth() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--cream)' }}>
       <div style={{ width: '100%', maxWidth: 420, padding: 40, background: 'var(--sand)', borderRadius: 20, border: '1px solid var(--border)' }}>
-        <div className="brand" style={{ marginBottom: 28 }}>
+        <div className="brand" style={{ marginBottom: 24 }}>
           <div className="brand-mark">Th</div>
           <span style={{ fontSize: 18, fontWeight: 600 }}>Thalify</span>
         </div>
 
-        <div style={{ display: 'flex', gap: 4, marginBottom: 28, background: 'var(--cream)', padding: 4, borderRadius: 10 }}>
+        {isFromWaitlist && (
+          <div style={{ background: 'var(--sage-100, #EEF7EC)', color: 'var(--sage-700)', padding: '12px 14px', borderRadius: 10, marginBottom: 20, fontSize: 13, lineHeight: 1.5 }}>
+            <div style={{ fontWeight: 700, marginBottom: 2 }}>Welcome — your early access is active.</div>
+            <div style={{ color: 'var(--ink-2)' }}>Set a password to create your account.</div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: 'var(--cream)', padding: 4, borderRadius: 10 }}>
           {(['login', 'register'] as Tab[]).map(t => (
             <button
               key={t}
