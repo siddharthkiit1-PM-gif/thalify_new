@@ -223,7 +223,7 @@ Now answer ${firstName}'s question using everything above.`;
         maxTokens: 1024,
       });
     } catch (err) {
-      throw new Error(classifyError(err).userMessage);
+      throw new Error(classifyError(err).userMessage, { cause: err });
     }
 
     await ctx.runMutation(api.chat.saveMessage, { from: "ai", text: aiText });

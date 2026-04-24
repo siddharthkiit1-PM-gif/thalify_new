@@ -77,7 +77,7 @@ export const analyzeLabReport = action({
       });
       result = extractJson<LabResult>(raw);
     } catch (err) {
-      throw new Error(classifyError(err).userMessage);
+      throw new Error(classifyError(err).userMessage, { cause: err });
     }
 
     if (!result.markers || !Array.isArray(result.markers)) {

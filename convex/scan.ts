@@ -85,10 +85,10 @@ export const scanMeal = action({
         try {
           items = await scan(imageBase64, mediaType);
         } catch (err2) {
-          throw new Error(classifyError(err2).userMessage);
+          throw new Error(classifyError(err2).userMessage, { cause: err2 });
         }
       } else {
-        throw new Error(first.userMessage);
+        throw new Error(first.userMessage, { cause: err });
       }
     }
 

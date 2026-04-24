@@ -8,7 +8,7 @@ import './Waitlist.css'
 const LAUNCH_TARGET_MS = new Date('2026-04-25T09:00:00+05:30').getTime()
 
 function useNow() {
-  const [now, setNow] = useState(Date.now())
+  const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(t)

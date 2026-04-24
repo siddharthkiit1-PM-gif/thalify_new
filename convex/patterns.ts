@@ -73,7 +73,7 @@ Return ONLY the JSON object.`;
       });
       return extractJson<PatternResult>(raw);
     } catch (err) {
-      throw new Error(classifyError(err).userMessage);
+      throw new Error(classifyError(err).userMessage, { cause: err });
     }
   },
 });
