@@ -62,6 +62,102 @@ export async function sendEmail(opts: {
   }
 }
 
+export async function addContactToBrevoList(opts: { email: string; name?: string; listIds?: number[] }): Promise<void> {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) return;
+
+  const body: Record<string, unknown> = {
+    email: opts.email.toLowerCase().trim(),
+    updateEnabled: true,
+  };
+  if (opts.name) {
+    const parts = opts.name.trim().split(/\s+/);
+    body.attributes = {
+      FIRSTNAME: parts[0] ?? "",
+      LASTNAME: parts.slice(1).join(" "),
+    };
+  }
+  if (opts.listIds && opts.listIds.length > 0) {
+    body.listIds = opts.listIds;
+  }
+
+  try {
+    await fetch("https://api.brevo.com/v3/contacts", {
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "api-key": apiKey,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    console.error("Brevo contact add failed:", err);
+  }
+}
+
+export function signupCongratsHtml(opts: { email: string; name?: string; appUrl: string }): string {
+  const firstName = opts.name?.trim().split(/\s+/)[0] || "there";
+  const dashboardUrl = `${opts.appUrl}/dashboard`;
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8" /><title>Welcome to Thalify 🎉</title></head>
+<body style="margin:0;padding:0;background:#FEFCF8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1A1A1A;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#FEFCF8;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:20px;padding:44px 40px;border:1px solid #E8E2D5;">
+        <tr><td>
+          <div style="margin-bottom:28px;">
+            <table cellpadding="0" cellspacing="0"><tr>
+              <td style="width:36px;height:36px;background:#2D5F3A;color:#FEFCF8;border-radius:8px;text-align:center;vertical-align:middle;font-weight:700;font-size:14px;">Th</td>
+              <td style="padding-left:10px;font-size:18px;font-weight:600;color:#1A1A1A;">Thalify</td>
+            </tr></table>
+          </div>
+
+          <div style="font-size:32px;margin-bottom:12px;">🎉</div>
+
+          <h1 style="font-family:Georgia,serif;font-size:30px;line-height:1.25;margin:0 0 14px 0;color:#1A1A1A;font-weight:500;">
+            Congrats ${firstName}, you're on board.
+          </h1>
+
+          <p style="font-size:16px;line-height:1.65;color:#4A4A4A;margin:0 0 28px 0;">
+            Your Thalify account is live. You've got unlimited AI meal scans, coach chat, family plate optimizer, and lab analysis — all tuned for Indian food.
+          </p>
+
+          <table cellpadding="0" cellspacing="0" style="margin:0 0 28px 0;">
+            <tr><td style="border-radius:12px;background:#2D5F3A;">
+              <a href="${dashboardUrl}"
+                 style="display:inline-block;padding:16px 36px;font-size:15px;font-weight:600;color:#FEFCF8;text-decoration:none;border-radius:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+                Sign in to Thalify →
+              </a>
+            </td></tr>
+          </table>
+
+          <div style="background:#F3F0E8;border-radius:14px;padding:22px;margin:0 0 28px 0;">
+            <div style="font-size:11px;font-weight:700;color:#2D5F3A;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Your 3-minute first test</div>
+            <div style="font-size:14px;color:#1A1A1A;line-height:1.9;">
+              <b>1.</b> &nbsp;Finish onboarding (goal, diet, city) — takes 30 sec<br/>
+              <b>2.</b> &nbsp;Open the Scan page → take a photo of anything on your plate<br/>
+              <b>3.</b> &nbsp;Ask the AI coach: <i>"What should I eat for dinner tonight?"</i>
+            </div>
+          </div>
+
+          <p style="font-size:14px;line-height:1.65;color:#4A4A4A;margin:0 0 16px 0;">
+            Your feedback shapes what we build next. Reply to this email with anything that breaks, confuses, or delights you. A human reads every reply.
+          </p>
+
+          <p style="font-size:13px;line-height:1.6;color:#8A8A8A;margin:16px 0 0 0;">
+            — The Thalify team
+          </p>
+        </td></tr>
+      </table>
+      <div style="font-size:11px;color:#8A8A8A;margin-top:20px;">
+        Sent to ${opts.email} · Account created on Thalify
+      </div>
+    </td></tr>
+  </table>
+</body></html>`;
+}
+
 export function waitlistWelcomeHtml(opts: { email: string; position: number; appUrl: string }): string {
   const signupUrl = `${opts.appUrl}/auth?email=${encodeURIComponent(opts.email)}&ref=waitlist`;
   return `<!DOCTYPE html>

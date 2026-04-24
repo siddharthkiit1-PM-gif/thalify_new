@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthActions } from '@convex-dev/auth/react'
-import { useConvexAuth, useQuery } from 'convex/react'
+import { useConvexAuth, useQuery, useAction } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 
 type Tab = 'login' | 'register'
@@ -12,6 +12,7 @@ export default function Auth() {
   const prefilledEmail = searchParams.get('email') ?? ''
   const isFromWaitlist = searchParams.get('ref') === 'waitlist'
   const { signIn } = useAuthActions()
+  const sendSignupWelcome = useAction(api.accountEmails.sendSignupWelcome)
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth()
   const profile = useQuery(api.users.getProfile)
   const [tab, setTab] = useState<Tab>('register')
@@ -36,20 +37,28 @@ export default function Auth() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    const trimmedName = name.trim()
+    const trimmedEmail = email.trim()
+    if (tab === 'register' && trimmedName.length < 2) { setError('Please enter your name'); return }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) { setError('Please enter a valid email'); return }
     if (password.length < 8) { setError('Password must be at least 8 characters'); return }
     setSubmitted(true)
     try {
       if (tab === 'register') {
-        await signIn('password', { name, email, password, flow: 'signUp' })
+        await signIn('password', { name: trimmedName, email: trimmedEmail, password, flow: 'signUp' })
+        sendSignupWelcome({ email: trimmedEmail, name: trimmedName }).catch(err => {
+          console.error('Signup welcome email failed:', err)
+        })
       } else {
-        await signIn('password', { email, password, flow: 'signIn' })
+        await signIn('password', { email: trimmedEmail, password, flow: 'signIn' })
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       if (tab === 'login') {
         setError('Incorrect email or password')
-      } else if (msg.toLowerCase().includes('exists') || msg.toLowerCase().includes('duplicate') || msg.toLowerCase().includes('already')) {
-        setError('An account with this email already exists — try Login instead')
+      } else if (msg.toLowerCase().includes('exists') || msg.toLowerCase().includes('duplicate') || msg.toLowerCase().includes('already') || msg.toLowerCase().includes('unique')) {
+        setError('An account with this email already exists. Switching to Login…')
+        setTimeout(() => { setTab('login'); setError(''); setName(''); setPassword('') }, 1500)
       } else {
         setError(msg || 'Sign in failed — please try again')
       }
