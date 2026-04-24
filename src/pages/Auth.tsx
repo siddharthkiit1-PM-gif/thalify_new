@@ -11,11 +11,12 @@ export default function Auth() {
   const [searchParams] = useSearchParams()
   const prefilledEmail = searchParams.get('email') ?? ''
   const isFromWaitlist = searchParams.get('ref') === 'waitlist'
+  const initialMode = searchParams.get('mode') === 'login' ? 'login' : 'register'
   const { signIn, signOut } = useAuthActions()
   const sendSignupWelcome = useAction(api.accountEmails.sendSignupWelcome)
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth()
   const profile = useQuery(api.users.getProfile)
-  const [tab, setTab] = useState<Tab>('register')
+  const [tab, setTab] = useState<Tab>(initialMode)
   const [name, setName] = useState('')
   const [email, setEmail] = useState(prefilledEmail)
   const [password, setPassword] = useState('')
@@ -27,7 +28,8 @@ export default function Auth() {
 
   useEffect(() => {
     if (signupComplete) return
-    if (!submitted && !isAuthenticated) return
+    if (!submitted) return
+    if (tab === 'register') return
     if (authLoading) return
     if (!isAuthenticated) return
     if (profile === undefined) return
@@ -36,7 +38,7 @@ export default function Auth() {
     } else {
       navigate('/dashboard', { replace: true })
     }
-  }, [signupComplete, submitted, authLoading, isAuthenticated, profile, navigate])
+  }, [signupComplete, submitted, tab, authLoading, isAuthenticated, profile, navigate])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -77,12 +79,7 @@ export default function Auth() {
   }
 
   function goToSignIn() {
-    setSignupComplete(false)
-    setTab('login')
-    setEmail(createdEmail)
-    setName('')
-    setPassword('')
-    setError('')
+    window.location.href = `/auth?email=${encodeURIComponent(createdEmail)}&mode=login`
   }
 
   const showLoading = submitted && !error
