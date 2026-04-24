@@ -14,6 +14,33 @@ export const recordSignupEmailRateLimit = internalMutation({
   },
 });
 
+/**
+ * Admin-only backfill: send welcome email to a specific address without auth check.
+ * Invoke via:
+ *   CONVEX_DEPLOYMENT=prod:… npx convex run accountEmails:backfillWelcome '{"email":"x@y.com","name":"X"}'
+ */
+export const backfillWelcome = action({
+  args: {
+    email: v.string(),
+    name: v.optional(v.string()),
+  },
+  handler: async (_ctx, { email, name }): Promise<{ emailSent: boolean; error: string | null }> => {
+    const normalized = email.toLowerCase().trim();
+    const safeName = name ? name.trim().slice(0, 100) : undefined;
+    try {
+      await sendEmail({
+        to: { email: normalized, name: safeName },
+        subject: safeName ? `Welcome to Thalify, ${safeName.split(/\s+/)[0]} 🎉` : "Welcome to Thalify 🎉",
+        html: signupCongratsHtml({ email: normalized, name: safeName, appUrl: APP_URL }),
+      });
+      try { await addContactToBrevoList({ email: normalized, name: safeName }); } catch { /* non-fatal */ }
+      return { emailSent: true, error: null };
+    } catch (err) {
+      return { emailSent: false, error: err instanceof EmailError ? err.userMessage : (err instanceof Error ? err.message : "failed") };
+    }
+  },
+});
+
 export const sendSignupWelcome = action({
   args: {
     email: v.string(),

@@ -1,7 +1,9 @@
 import { GoogleGenAI } from "@google/genai";
 
-export const GEMINI_MODEL = "gemini-flash-latest";
-export const GEMINI_VISION_MODEL = "gemini-flash-latest";
+// gemini-2.5-flash-lite has 1000 RPD on free tier (vs gemini-flash-latest's 20).
+// Still supports vision, good quality for scan + chat + family + lab + patterns.
+export const GEMINI_MODEL = "gemini-2.5-flash-lite";
+export const GEMINI_VISION_MODEL = "gemini-2.5-flash-lite";
 
 export class AiError extends Error {
   readonly code: "quota" | "rate_limit" | "invalid_request" | "network" | "parse" | "unknown";

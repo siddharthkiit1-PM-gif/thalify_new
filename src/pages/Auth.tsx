@@ -60,7 +60,13 @@ export default function Auth() {
     try {
       if (tab === 'register') {
         await signIn('password', { name: trimmedName, email: normalizedEmail, password, flow: 'signUp' })
-        sendSignupWelcome({ email: normalizedEmail, name: trimmedName }).catch(err => console.error(err))
+        // Must await before signOut — the action checks auth server-side,
+        // and signOut invalidates the session before the server can process it.
+        try {
+          await sendSignupWelcome({ email: normalizedEmail, name: trimmedName })
+        } catch (err) {
+          console.error('Signup welcome email failed:', err)
+        }
         setCreatedEmail(normalizedEmail)
         setCreatedName(trimmedName)
         try { await signOut() } catch { /* ignore */ }
