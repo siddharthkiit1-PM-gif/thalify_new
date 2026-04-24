@@ -37,8 +37,10 @@ export default function Chat() {
     setThinking(true)
     try {
       await chatWithCoach({ message: text })
-    } catch {
-      setError('Something went wrong — please try again.')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setError(msg || 'Could not reach Health Buddy — please retry.')
+      console.error('chatWithCoach failed:', err)
     } finally {
       setThinking(false)
     }
