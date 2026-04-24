@@ -7,7 +7,7 @@ type Action = 'keep' | 'reduce' | 'skip' | 'add'
 function optimizePlate(
   dishes: string[],
   goal: Goal,
-  calorieGoal: number,
+  _calorieGoal: number,
 ): { name: string; action: Action; recommendation: string; cal: number }[] {
   const result: { name: string; action: Action; recommendation: string; cal: number }[] = []
   let totalProtein = 0

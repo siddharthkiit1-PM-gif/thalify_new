@@ -27,8 +27,27 @@ export function classifyError(err: unknown): AiError {
   if (err instanceof AiError) return err;
   const msg = err instanceof Error ? err.message : String(err);
   const lower = msg.toLowerCase();
+
+  // Gemini 429 responses include "Please retry in Xs" in the message body.
+  // Short retry (< 2 min) = per-minute throttle (recoverable quickly).
+  // Long retry or no retry hint = daily/monthly quota (recover next cycle).
+  const retryMatch = msg.match(/retry in\s+([\d.]+)\s*s/i);
+  const retrySeconds = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : null;
+  const isPerMinuteThrottle = retrySeconds !== null && retrySeconds < 120;
+
   if (lower.includes("quota") || lower.includes("resource_exhausted")) {
-    return new AiError("quota", "AI daily quota reached — please try again tomorrow.", msg);
+    if (isPerMinuteThrottle) {
+      return new AiError(
+        "rate_limit",
+        `AI is briefly rate-limited — please retry in about ${retrySeconds} second${retrySeconds === 1 ? "" : "s"}.`,
+        msg,
+      );
+    }
+    return new AiError(
+      "quota",
+      "AI daily limit reached for today. Resets at midnight Pacific time.",
+      msg,
+    );
   }
   if (lower.includes("429") || (lower.includes("rate") && lower.includes("limit"))) {
     return new AiError("rate_limit", "Too many requests — please retry in a moment.", msg);
@@ -62,6 +81,10 @@ export function extractJson<T>(raw: string): T {
   }
 }
 
+async function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function generateText(opts: {
   system: string;
   messages: { role: "user" | "assistant"; content: string }[];
@@ -73,15 +96,31 @@ export async function generateText(opts: {
     role: m.role === "assistant" ? "model" as const : "user" as const,
     parts: [{ text: m.content }],
   }));
+  const doCall = () => client.models.generateContent({
+    model: opts.model ?? GEMINI_MODEL,
+    contents: parts,
+    config: {
+      systemInstruction: opts.system,
+      maxOutputTokens: opts.maxTokens ?? 1024,
+    },
+  });
   try {
-    const response = await client.models.generateContent({
-      model: opts.model ?? GEMINI_MODEL,
-      contents: parts,
-      config: {
-        systemInstruction: opts.system,
-        maxOutputTokens: opts.maxTokens ?? 1024,
-      },
-    });
+    let response;
+    try {
+      response = await doCall();
+    } catch (firstErr) {
+      // Auto-retry once for brief per-minute throttles. User never sees the error.
+      const classified = classifyError(firstErr);
+      if (classified.code === "rate_limit") {
+        const msg = firstErr instanceof Error ? firstErr.message : String(firstErr);
+        const retryMatch = msg.match(/retry in\s+([\d.]+)\s*s/i);
+        const waitMs = retryMatch ? Math.min(Math.ceil(parseFloat(retryMatch[1]) * 1000) + 500, 8000) : 2000;
+        await sleep(waitMs);
+        response = await doCall();
+      } else {
+        throw firstErr;
+      }
+    }
     const text = response.text;
     if (!text) {
       throw new AiError("parse", "AI returned empty response.", "empty text");
@@ -101,21 +140,36 @@ export async function generateFromImage(opts: {
   maxTokens?: number;
 }): Promise<string> {
   const client = getAiClient();
+  const doCall = () => client.models.generateContent({
+    model: opts.model ?? GEMINI_VISION_MODEL,
+    contents: [{
+      role: "user",
+      parts: [
+        { inlineData: { mimeType: opts.mediaType, data: opts.imageBase64 } },
+        { text: opts.userPrompt },
+      ],
+    }],
+    config: {
+      systemInstruction: opts.system,
+      maxOutputTokens: opts.maxTokens ?? 2048,
+    },
+  });
   try {
-    const response = await client.models.generateContent({
-      model: opts.model ?? GEMINI_VISION_MODEL,
-      contents: [{
-        role: "user",
-        parts: [
-          { inlineData: { mimeType: opts.mediaType, data: opts.imageBase64 } },
-          { text: opts.userPrompt },
-        ],
-      }],
-      config: {
-        systemInstruction: opts.system,
-        maxOutputTokens: opts.maxTokens ?? 2048,
-      },
-    });
+    let response;
+    try {
+      response = await doCall();
+    } catch (firstErr) {
+      const classified = classifyError(firstErr);
+      if (classified.code === "rate_limit") {
+        const msg = firstErr instanceof Error ? firstErr.message : String(firstErr);
+        const retryMatch = msg.match(/retry in\s+([\d.]+)\s*s/i);
+        const waitMs = retryMatch ? Math.min(Math.ceil(parseFloat(retryMatch[1]) * 1000) + 500, 8000) : 2000;
+        await sleep(waitMs);
+        response = await doCall();
+      } else {
+        throw firstErr;
+      }
+    }
     const text = response.text;
     if (!text) {
       throw new AiError("parse", "AI returned empty response.", "empty text");
