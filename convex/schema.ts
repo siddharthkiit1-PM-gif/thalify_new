@@ -106,4 +106,10 @@ export default defineSchema({
     email: v.string(),
     createdAt: v.number(),
   }),
+
+  rateLimits: defineTable({
+    key: v.string(),
+    events: v.array(v.number()),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
 });

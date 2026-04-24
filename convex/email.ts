@@ -3,6 +3,8 @@
  * Free tier: 300 emails/day. Docs: https://developers.brevo.com/reference/sendtransacemail
  */
 
+import { escapeHtml } from "./lib/security";
+
 export class EmailError extends Error {
   readonly userMessage: string;
   readonly statusCode: number;
@@ -97,7 +99,8 @@ export async function addContactToBrevoList(opts: { email: string; name?: string
 }
 
 export function signupCongratsHtml(opts: { email: string; name?: string; appUrl: string }): string {
-  const firstName = opts.name?.trim().split(/\s+/)[0] || "there";
+  const firstName = escapeHtml(opts.name?.trim().split(/\s+/)[0] || "there");
+  const safeEmail = escapeHtml(opts.email);
   const dashboardUrl = `${opts.appUrl}/dashboard`;
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8" /><title>Welcome to Thalify 🎉</title></head>
@@ -151,7 +154,7 @@ export function signupCongratsHtml(opts: { email: string; name?: string; appUrl:
         </td></tr>
       </table>
       <div style="font-size:11px;color:#8A8A8A;margin-top:20px;">
-        Sent to ${opts.email} · Account created on Thalify
+        Sent to ${safeEmail} · Account created on Thalify
       </div>
     </td></tr>
   </table>
@@ -159,6 +162,7 @@ export function signupCongratsHtml(opts: { email: string; name?: string; appUrl:
 }
 
 export function waitlistWelcomeHtml(opts: { email: string; position: number; appUrl: string }): string {
+  const safeEmail = escapeHtml(opts.email);
   const signupUrl = `${opts.appUrl}/auth?email=${encodeURIComponent(opts.email)}&ref=waitlist`;
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8" /><title>Your Thalify early access is ready</title></head>
@@ -219,7 +223,7 @@ export function waitlistWelcomeHtml(opts: { email: string; position: number; app
         </td></tr>
       </table>
       <div style="font-size:11px;color:#8A8A8A;margin-top:20px;">
-        Sent to ${opts.email} · You joined the Thalify waitlist
+        Sent to ${safeEmail} · You joined the Thalify waitlist
       </div>
     </td></tr>
   </table>

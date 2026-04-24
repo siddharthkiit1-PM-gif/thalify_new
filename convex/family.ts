@@ -1,9 +1,17 @@
-import { action, mutation } from "./_generated/server";
+import { action, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { generateText, extractJson, classifyError } from "./ai/claude";
 import { matchDish } from "./data/foodMatcher";
+import { checkRateLimit } from "./lib/rateLimit";
+
+export const enforceFamilyRateLimit = internalMutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    await checkRateLimit(ctx, userId, "family");
+  },
+});
 
 type Action = "keep" | "reduce" | "skip" | "add";
 
@@ -162,6 +170,11 @@ export const optimizeFamily = action({
     if (!userId) throw new Error("Not authenticated");
     if (dishes.length === 0) throw new Error("Please add at least one dish.");
     if (dishes.length > 15) throw new Error("Too many dishes — max 15 per meal.");
+    for (const dish of dishes) {
+      if (typeof dish !== "string" || dish.length > 60) throw new Error("Dish name too long — keep under 60 characters.");
+    }
+
+    await ctx.runMutation(internal.family.enforceFamilyRateLimit, { userId });
 
     const profile = await ctx.runQuery(api.users.getProfile);
     const goal = profile?.goal ?? "maintain";

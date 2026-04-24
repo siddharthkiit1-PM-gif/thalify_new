@@ -1,8 +1,16 @@
-import { action, mutation, query } from "./_generated/server";
+import { action, internalMutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { api } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { generateFromImage, extractJson, classifyError } from "./ai/claude";
+import { checkRateLimit } from "./lib/rateLimit";
+
+export const enforceLabRateLimit = internalMutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    await checkRateLimit(ctx, userId, "lab");
+  },
+});
 
 const LAB_SYSTEM = `You are a clinical nutritionist who specializes in interpreting Indian patients' lab reports and translating results into actionable dietary guidance.
 
@@ -56,6 +64,8 @@ export const analyzeLabReport = action({
     if (imageBase64.length < 100) throw new Error("Image data invalid — please retry.");
     if (imageBase64.length > 10 * 1024 * 1024) throw new Error("Image too large — please use a smaller file (under 7MB).");
 
+    await ctx.runMutation(internal.lab.enforceLabRateLimit, { userId });
+
     let result: LabResult;
     try {
       const raw = await generateFromImage({
@@ -74,12 +84,12 @@ export const analyzeLabReport = action({
       throw new Error("Could not read lab values — try a clearer image of the report.");
     }
 
-    await ctx.runMutation(api.lab.saveLabResult, { userId, result });
+    await ctx.runMutation(internal.lab.saveLabResultInternal, { userId, result });
     return result;
   },
 });
 
-export const saveLabResult = mutation({
+export const saveLabResultInternal = internalMutation({
   args: {
     userId: v.id("users"),
     result: v.object({
@@ -98,9 +108,7 @@ export const saveLabResult = mutation({
     }),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-    await ctx.db.insert("labResults", { userId, result: args.result, createdAt: Date.now() });
+    await ctx.db.insert("labResults", { userId: args.userId, result: args.result, createdAt: Date.now() });
   },
 });
 

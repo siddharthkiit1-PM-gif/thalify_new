@@ -1,8 +1,9 @@
-import { action, mutation } from "./_generated/server";
+import { action, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { api } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { generateFromImage, extractJson, classifyError, AiError } from "./ai/claude";
+import { checkRateLimit } from "./lib/rateLimit";
 
 const SCAN_SYSTEM = `You are a world-class nutrition expert specializing in Indian cuisine with deep knowledge of regional Indian dishes across all 28 states.
 
@@ -66,6 +67,8 @@ export const scanMeal = action({
     if (imageBase64.length < 100) throw new Error("Image data invalid — please retry.");
     if (imageBase64.length > 10 * 1024 * 1024) throw new Error("Image too large — please use a smaller file (under 7MB).");
 
+    await ctx.runMutation(internal.scan.enforceScanRateLimit, { userId });
+
     let items: ScanItem[];
     try {
       items = await scan(imageBase64, mediaType);
@@ -90,7 +93,7 @@ export const scanMeal = action({
     const totalCal = cleaned.reduce((sum, i) => sum + i.cal, 0);
     const totalProtein = cleaned.reduce((sum, i) => sum + i.protein, 0);
 
-    await ctx.runMutation(api.scan.saveScanResult, {
+    await ctx.runMutation(internal.scan.saveScanResultInternal, {
       userId,
       items: cleaned,
       totalCal,
@@ -102,7 +105,14 @@ export const scanMeal = action({
   },
 });
 
-export const saveScanResult = mutation({
+export const enforceScanRateLimit = internalMutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    await checkRateLimit(ctx, userId, "scan");
+  },
+});
+
+export const saveScanResultInternal = internalMutation({
   args: {
     userId: v.id("users"),
     items: v.array(v.object({

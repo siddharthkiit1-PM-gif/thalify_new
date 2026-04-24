@@ -2,6 +2,7 @@ import { action, mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { sendEmail, waitlistWelcomeHtml, EmailError } from "./email";
+import { checkRateLimit } from "./lib/rateLimit";
 
 const APP_URL = process.env.APP_URL ?? "https://n-beta-flame.vercel.app";
 
@@ -28,6 +29,8 @@ export const getWaitlistCount = query({
 export const insertWaitlistEntry = internalMutation({
   args: { email: v.string() },
   handler: async (ctx, { email }) => {
+    await checkRateLimit(ctx, `email:${email}`, "waitlist");
+
     const existing = await ctx.db
       .query("waitlist")
       .filter(q => q.eq(q.field("email"), email))
@@ -49,6 +52,9 @@ export const joinWaitlist = action({
     const normalized = email.toLowerCase().trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
       throw new Error("Please enter a valid email address.");
+    }
+    if (normalized.length > 200) {
+      throw new Error("Email is too long.");
     }
 
     const { alreadyJoined, position } = await ctx.runMutation(internal.waitlist.insertWaitlistEntry, { email: normalized });

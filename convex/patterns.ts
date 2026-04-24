@@ -1,7 +1,16 @@
-import { action } from "./_generated/server";
+import { action, internalMutation } from "./_generated/server";
+import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { generateText, extractJson, classifyError } from "./ai/claude";
+import { checkRateLimit } from "./lib/rateLimit";
+
+export const enforcePatternsRateLimit = internalMutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    await checkRateLimit(ctx, userId, "patterns");
+  },
+});
 
 type PatternResult = {
   topPatterns: string[];
@@ -16,6 +25,8 @@ export const analyzePatterns = action({
   handler: async (ctx): Promise<PatternResult> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+
+    await ctx.runMutation(internal.patterns.enforcePatternsRateLimit, { userId });
 
     const [logs, profile] = await Promise.all([
       ctx.runQuery(api.meals.getRecentLogs),

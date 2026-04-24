@@ -1,8 +1,16 @@
-import { action, mutation, query } from "./_generated/server";
+import { action, mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { generateText, classifyError } from "./ai/claude";
+import { checkRateLimit } from "./lib/rateLimit";
+
+export const enforceChatRateLimit = internalMutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    await checkRateLimit(ctx, userId, "chat");
+  },
+});
 
 const CHAT_MAX_MSG_LEN = 2000;
 
@@ -53,6 +61,8 @@ export const chatWithCoach = action({
     const trimmed = message.trim();
     if (trimmed.length === 0) throw new Error("Please type a message.");
     if (trimmed.length > CHAT_MAX_MSG_LEN) throw new Error(`Message too long (max ${CHAT_MAX_MSG_LEN} characters).`);
+
+    await ctx.runMutation(internal.chat.enforceChatRateLimit, { userId });
 
     const [profile, todayLogs, history] = await Promise.all([
       ctx.runQuery(api.users.getProfile),
