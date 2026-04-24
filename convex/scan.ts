@@ -4,6 +4,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
 import { generateFromImage, extractJson, classifyError, AiError } from "./ai/claude";
 import { checkRateLimit } from "./lib/rateLimit";
+import { isUnlimitedUser } from "./lib/tiers";
 
 const SCAN_SYSTEM = `You are a world-class nutrition expert specializing in Indian cuisine with deep knowledge of regional Indian dishes across all 28 states.
 
@@ -116,7 +117,9 @@ export const scanMeal = action({
 export const enforceScanRateLimit = internalMutation({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
-    await checkRateLimit(ctx, userId, "scan");
+    const user = await ctx.db.get(userId);
+    const limitKey = isUnlimitedUser(user?.email ?? null) ? "scan" : "scan_free";
+    await checkRateLimit(ctx, userId, limitKey);
   },
 });
 

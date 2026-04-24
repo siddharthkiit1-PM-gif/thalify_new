@@ -4,11 +4,14 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { api, internal } from "./_generated/api";
 import { generateText, classifyError } from "./ai/claude";
 import { checkRateLimit } from "./lib/rateLimit";
+import { isUnlimitedUser } from "./lib/tiers";
 
 export const enforceChatRateLimit = internalMutation({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
-    await checkRateLimit(ctx, userId, "chat");
+    const user = await ctx.db.get(userId);
+    const limitKey = isUnlimitedUser(user?.email ?? null) ? "chat" : "chat_free";
+    await checkRateLimit(ctx, userId, limitKey);
   },
 });
 
