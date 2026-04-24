@@ -103,7 +103,9 @@ export default function Auth() {
         setView('forgotReset')
         setInfo('')
       }, 1200)
-    } catch (err: unknown) {
+    } catch {
+      // Intentionally generic — prevents email enumeration (don't reveal
+      // whether an account exists for this email).
       setInfo('If an account exists for this email, a reset code is on its way.')
       setTimeout(() => setView('forgotReset'), 1200)
     } finally {

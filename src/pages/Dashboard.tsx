@@ -84,7 +84,7 @@ export default function Dashboard() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 24 }}>
             {[
               ['📷', 'Scan Meal', '/scan'],
-              ['💬', 'AI Coach', '/chat'],
+              ['💬', 'Health Buddy', '/chat'],
               ['🍛', 'Family', '/family'],
               ['🧪', 'Labs', '/lab'],
             ].map(([icon, label, path]) => (
