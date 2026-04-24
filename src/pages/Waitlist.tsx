@@ -1,17 +1,29 @@
 import { useState, useEffect } from 'react'
 import { useAction } from 'convex/react'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../../convex/_generated/api'
 import './Waitlist.css'
 
-// Countdown to 25 April 2026, 9:00 AM IST
-function useCountdown() {
-  const target = new Date('2026-04-25T09:00:00+05:30').getTime()
+// Launch target: Friday 25 April 2026, 9:00 AM IST
+const LAUNCH_TARGET_MS = new Date('2026-04-25T09:00:00+05:30').getTime()
+
+function useNow() {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(t)
   }, [])
-  const diff = Math.max(0, target - now)
+  return now
+}
+
+function useIsLaunched() {
+  const now = useNow()
+  return now >= LAUNCH_TARGET_MS
+}
+
+function useCountdown() {
+  const now = useNow()
+  const diff = Math.max(0, LAUNCH_TARGET_MS - now)
   const d = Math.floor(diff / 86400000)
   const h = Math.floor((diff % 86400000) / 3600000)
   const m = Math.floor((diff % 3600000) / 60000)
@@ -21,6 +33,15 @@ function useCountdown() {
 
 function LaunchBar() {
   const { d, h, m, s } = useCountdown()
+  const launched = useIsLaunched()
+  if (launched) {
+    return (
+      <div className="launch-bar">
+        <span className="pulse" />
+        <b>We're live!</b> &middot; Sign in or create an account to start using Thalify
+      </div>
+    )
+  }
   return (
     <div className="launch-bar">
       <span className="pulse" />
@@ -31,12 +52,57 @@ function LaunchBar() {
   )
 }
 
+interface PostLaunchAuthCtaProps {
+  dark?: boolean
+  inline?: boolean
+}
+
+function PostLaunchAuthCta({ dark = false, inline = false }: PostLaunchAuthCtaProps) {
+  const navigate = useNavigate()
+  if (inline) {
+    return (
+      <div className="hero-form-inline" style={{ display: 'flex', gap: 8 }}>
+        <button className="hero-submit" onClick={() => navigate('/auth?mode=login')} style={{ flex: 1 }}>
+          Sign in <span>&#8594;</span>
+        </button>
+        <button className="hero-submit" onClick={() => navigate('/auth')} style={{ flex: 1, background: 'transparent', border: '1.5px solid var(--sage-700)', color: 'var(--sage-700)' }}>
+          Create account
+        </button>
+      </div>
+    )
+  }
+  return (
+    <div>
+      <button className="go-btn" onClick={() => navigate('/auth')}>
+        Create my account
+        <span className="arrow">&#8594;</span>
+      </button>
+      <div style={{ textAlign: 'center', margin: '14px 0', fontSize: 13, color: dark ? 'rgba(254,252,248,0.55)' : 'var(--muted)' }}>
+        Already have an account?{' '}
+        <span onClick={() => navigate('/auth?mode=login')} style={{ color: dark ? 'var(--sage-500)' : 'var(--sage-700)', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}>
+          Sign in
+        </span>
+      </div>
+      <div style={{ fontSize: 11.5, color: dark ? 'rgba(254,252,248,0.45)' : 'var(--muted)', lineHeight: 1.55, marginTop: 8 }}>
+        Free tier includes 5 photo scans and 5 Health Buddy chats per day. Full access with your lifetime Pro seat if you were on the waitlist.
+      </div>
+    </div>
+  )
+}
+
 interface HeroFormProps {
   dark?: boolean
   inline?: boolean
 }
 
 function HeroForm({ dark = false, inline = false }: HeroFormProps) {
+  const launched = useIsLaunched()
+  if (launched) return <PostLaunchAuthCta dark={dark} inline={inline} />
+
+  return <HeroFormLive dark={dark} inline={inline} />
+}
+
+function HeroFormLive({ dark = false, inline = false }: HeroFormProps) {
   const joinWaitlist = useAction(api.waitlist.joinWaitlist)
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
