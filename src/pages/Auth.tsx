@@ -44,25 +44,25 @@ export default function Auth() {
     e.preventDefault()
     setError('')
     const trimmedName = name.trim()
-    const trimmedEmail = email.trim()
+    const normalizedEmail = email.trim().toLowerCase()
     if (tab === 'register' && trimmedName.length < 2) { setError('Please enter your name'); return }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) { setError('Please enter a valid email'); return }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) { setError('Please enter a valid email'); return }
     if (password.length < 8) { setError('Password must be at least 8 characters'); return }
     setSubmitted(true)
     try {
       if (tab === 'register') {
-        await signIn('password', { name: trimmedName, email: trimmedEmail, password, flow: 'signUp' })
-        sendSignupWelcome({ email: trimmedEmail, name: trimmedName }).catch(err => {
+        await signIn('password', { name: trimmedName, email: normalizedEmail, password, flow: 'signUp' })
+        sendSignupWelcome({ email: normalizedEmail, name: trimmedName }).catch(err => {
           console.error('Signup welcome email failed:', err)
         })
-        setCreatedEmail(trimmedEmail)
+        setCreatedEmail(normalizedEmail)
         setCreatedName(trimmedName)
         try { await signOut() } catch { /* ignore */ }
         setPassword('')
         setSignupComplete(true)
         setSubmitted(false)
       } else {
-        await signIn('password', { email: trimmedEmail, password, flow: 'signIn' })
+        await signIn('password', { email: normalizedEmail, password, flow: 'signIn' })
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)

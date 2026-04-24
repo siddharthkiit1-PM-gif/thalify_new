@@ -20,6 +20,7 @@ const MEAL_ICON: Record<string, string> = {
 export default function Dashboard() {
   const navigate = useNavigate()
   const profile = useQuery(api.users.getProfile)
+  const currentUser = useQuery(api.users.getCurrentUser)
   const todayLogs = useQuery(api.meals.getTodayLogs, { date: todayDate() })
 
   const totalCal = todayLogs?.reduce((acc, log) => acc + log.totalCal, 0) ?? 0
@@ -46,7 +47,7 @@ export default function Dashboard() {
       <div className="page" style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 28 }}>
         <div>
           <div style={{ marginBottom: 6, color: 'var(--muted)', fontSize: 14 }}>
-            {greeting()}{(profile as any)?.name ? `, ${(profile as any).name}` : ''}
+            {greeting()}{currentUser?.name ? `, ${currentUser.name.split(' ')[0]}` : ''}
           </div>
           <h1 className="serif" style={{ fontSize: 32, marginBottom: 24 }}>Today's Overview</h1>
 

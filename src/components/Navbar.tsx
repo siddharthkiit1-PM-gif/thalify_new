@@ -17,15 +17,17 @@ export default function Navbar() {
   const location = useLocation()
   const current = location.pathname.replace('/', '')
   const { signOut } = useAuthActions()
-  const profile = useQuery(api.users.getProfile)
+  const currentUser = useQuery(api.users.getCurrentUser)
 
   async function handleSignOut() {
     await signOut()
     navigate('/')
   }
 
-  const initials = (profile as any)?.name
-    ? (profile as any).name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
+  const initials = currentUser?.name
+    ? currentUser.name.split(' ').filter(Boolean).map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
+    : currentUser?.email
+    ? currentUser.email[0].toUpperCase()
     : 'U'
 
   return (

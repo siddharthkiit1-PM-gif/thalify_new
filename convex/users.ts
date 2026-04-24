@@ -14,6 +14,21 @@ export const getProfile = query({
   },
 });
 
+export const getCurrentUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const user = await ctx.db.get(userId);
+    if (!user) return null;
+    return {
+      _id: user._id,
+      email: user.email ?? null,
+      name: user.name ?? null,
+    };
+  },
+});
+
 export const createProfile = mutation({
   args: {
     goal: v.union(v.literal("lose"), v.literal("maintain"), v.literal("diabetes"), v.literal("gain")),
