@@ -85,6 +85,20 @@ async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Decide whether to auto-retry after a 429. Returns the wait in ms, or null if we should give up.
+ * Short throttles (< 10 seconds) are worth waiting out — user just sees a slight delay.
+ * Long throttles (>= 10 seconds) — surface the error immediately; don't block the action for a minute.
+ */
+function retryDelayMs(err: unknown): number | null {
+  const msg = err instanceof Error ? err.message : String(err);
+  const match = msg.match(/retry in\s+([\d.]+)\s*s/i);
+  if (!match) return null;
+  const seconds = parseFloat(match[1]);
+  if (seconds >= 10) return null; // too long — fail fast, don't hang the action
+  return Math.ceil(seconds * 1000) + 500;
+}
+
 export async function generateText(opts: {
   system: string;
   messages: { role: "user" | "assistant"; content: string }[];
@@ -111,10 +125,8 @@ export async function generateText(opts: {
     } catch (firstErr) {
       // Auto-retry once for brief per-minute throttles. User never sees the error.
       const classified = classifyError(firstErr);
-      if (classified.code === "rate_limit") {
-        const msg = firstErr instanceof Error ? firstErr.message : String(firstErr);
-        const retryMatch = msg.match(/retry in\s+([\d.]+)\s*s/i);
-        const waitMs = retryMatch ? Math.min(Math.ceil(parseFloat(retryMatch[1]) * 1000) + 500, 8000) : 2000;
+      const waitMs = classified.code === "rate_limit" ? retryDelayMs(firstErr) : null;
+      if (waitMs !== null) {
         await sleep(waitMs);
         response = await doCall();
       } else {
@@ -160,10 +172,8 @@ export async function generateFromImage(opts: {
       response = await doCall();
     } catch (firstErr) {
       const classified = classifyError(firstErr);
-      if (classified.code === "rate_limit") {
-        const msg = firstErr instanceof Error ? firstErr.message : String(firstErr);
-        const retryMatch = msg.match(/retry in\s+([\d.]+)\s*s/i);
-        const waitMs = retryMatch ? Math.min(Math.ceil(parseFloat(retryMatch[1]) * 1000) + 500, 8000) : 2000;
+      const waitMs = classified.code === "rate_limit" ? retryDelayMs(firstErr) : null;
+      if (waitMs !== null) {
         await sleep(waitMs);
         response = await doCall();
       } else {
