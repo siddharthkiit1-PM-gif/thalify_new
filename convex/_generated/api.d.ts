@@ -23,6 +23,7 @@ import type * as lib_calorie from "../lib/calorie.js";
 import type * as lib_rateLimit from "../lib/rateLimit.js";
 import type * as lib_security from "../lib/security.js";
 import type * as meals from "../meals.js";
+import type * as passwordReset from "../passwordReset.js";
 import type * as patterns from "../patterns.js";
 import type * as scan from "../scan.js";
 import type * as users from "../users.js";
@@ -50,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   "lib/rateLimit": typeof lib_rateLimit;
   "lib/security": typeof lib_security;
   meals: typeof meals;
+  passwordReset: typeof passwordReset;
   patterns: typeof patterns;
   scan: typeof scan;
   users: typeof users;
