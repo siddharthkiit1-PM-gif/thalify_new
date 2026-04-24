@@ -15,6 +15,11 @@ export const getProfile = query({
   },
 });
 
+const ADMIN_EMAILS = new Set([
+  "siddharth.kiit1@gmail.com",
+  "agrawalsiddharth18@gmail.com",
+]);
+
 export const getCurrentUser = query({
   args: {},
   handler: async (ctx) => {
@@ -22,11 +27,27 @@ export const getCurrentUser = query({
     if (!userId) return null;
     const user = await ctx.db.get(userId);
     if (!user) return null;
+    const email = user.email ?? null;
     return {
       _id: user._id,
-      email: user.email ?? null,
+      email,
       name: user.name ?? null,
+      isAdmin: email ? ADMIN_EMAILS.has(email.toLowerCase()) : false,
     };
+  },
+});
+
+export const setPhotoStoragePreference = mutation({
+  args: { allow: v.boolean() },
+  handler: async (ctx, { allow }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+    if (!profile) throw new Error("Complete onboarding first");
+    await ctx.db.patch(profile._id, { allowPhotoStorage: allow });
   },
 });
 

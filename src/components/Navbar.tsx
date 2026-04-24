@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthActions } from '@convex-dev/auth/react'
-import { useQuery } from 'convex/react'
+import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 
 const LINKS = [
@@ -19,8 +19,16 @@ export default function Navbar() {
   const current = location.pathname.replace('/', '')
   const { signOut } = useAuthActions()
   const currentUser = useQuery(api.users.getCurrentUser)
+  const profile = useQuery(api.users.getProfile)
+  const setPhotoStorage = useMutation(api.users.setPhotoStoragePreference)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  const photoStorageAllowed = profile?.allowPhotoStorage !== false // default true
+  async function togglePhotoStorage() {
+    if (!profile) return
+    try { await setPhotoStorage({ allow: !photoStorageAllowed }) } catch (e) { console.error(e) }
+  }
 
   useEffect(() => {
     if (!menuOpen) return
@@ -113,6 +121,23 @@ export default function Navbar() {
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
                 Dashboard
+              </div>
+              {currentUser?.isAdmin && (
+                <div
+                  onClick={() => { setMenuOpen(false); navigate('/admin') }}
+                  style={{ padding: '10px 16px', fontSize: 13, color: 'var(--sage-700)', fontWeight: 600, cursor: 'pointer', transition: 'background 0.1s' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--cream)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  🛠️ Admin
+                </div>
+              )}
+              <div style={{ padding: '10px 16px', fontSize: 13, color: 'var(--ink-2)', borderTop: '1px solid var(--border)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={photoStorageAllowed} onChange={togglePhotoStorage} style={{ cursor: 'pointer' }} />
+                  <span>Store my meal photos</span>
+                </label>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, marginLeft: 22 }}>Helps us improve scan accuracy over time</div>
               </div>
               <div
                 onClick={handleSignOut}

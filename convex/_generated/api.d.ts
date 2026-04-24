@@ -10,6 +10,7 @@
 
 import type * as accountEmails from "../accountEmails.js";
 import type * as admin from "../admin.js";
+import type * as adminScans from "../adminScans.js";
 import type * as ai_claude from "../ai/claude.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
@@ -26,6 +27,8 @@ import type * as meals from "../meals.js";
 import type * as passwordReset from "../passwordReset.js";
 import type * as patterns from "../patterns.js";
 import type * as scan from "../scan.js";
+import type * as scanFeedback from "../scanFeedback.js";
+import type * as storage from "../storage.js";
 import type * as users from "../users.js";
 import type * as waitlist from "../waitlist.js";
 
@@ -38,6 +41,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   accountEmails: typeof accountEmails;
   admin: typeof admin;
+  adminScans: typeof adminScans;
   "ai/claude": typeof ai_claude;
   auth: typeof auth;
   chat: typeof chat;
@@ -54,6 +58,8 @@ declare const fullApi: ApiFromModules<{
   passwordReset: typeof passwordReset;
   patterns: typeof patterns;
   scan: typeof scan;
+  scanFeedback: typeof scanFeedback;
+  storage: typeof storage;
   users: typeof users;
   waitlist: typeof waitlist;
 }>;

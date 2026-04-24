@@ -60,8 +60,14 @@ export const scanMeal = action({
       v.literal("image/webp"),
       v.literal("image/gif"),
     )),
+    imageStorageId: v.optional(v.id("_storage")),
   },
-  handler: async (ctx, { imageBase64, mediaType = "image/jpeg" }) => {
+  handler: async (ctx, { imageBase64, mediaType = "image/jpeg", imageStorageId }): Promise<{
+    scanResultId: string;
+    items: ScanItem[];
+    totalCal: number;
+    totalProtein: number;
+  }> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
     if (imageBase64.length < 100) throw new Error("Image data invalid — please retry.");
@@ -93,15 +99,17 @@ export const scanMeal = action({
     const totalCal = cleaned.reduce((sum, i) => sum + i.cal, 0);
     const totalProtein = cleaned.reduce((sum, i) => sum + i.protein, 0);
 
-    await ctx.runMutation(internal.scan.saveScanResultInternal, {
+    const scanResultId: string = await ctx.runMutation(internal.scan.saveScanResultInternal, {
       userId,
       items: cleaned,
+      rawItems: cleaned,
       totalCal,
       totalProtein,
       confidence: 0.9,
+      imageStorageId,
     });
 
-    return { items: cleaned, totalCal, totalProtein };
+    return { scanResultId, items: cleaned, totalCal, totalProtein };
   },
 });
 
@@ -119,15 +127,40 @@ export const saveScanResultInternal = internalMutation({
       name: v.string(), portion: v.string(),
       cal: v.number(), protein: v.number(), carbs: v.number(), fat: v.number(),
     })),
+    rawItems: v.array(v.object({
+      name: v.string(), portion: v.string(),
+      cal: v.number(), protein: v.number(), carbs: v.number(), fat: v.number(),
+    })),
     totalCal: v.number(),
     totalProtein: v.optional(v.number()),
     confidence: v.number(),
+    imageStorageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
-    await ctx.db.insert("scanResults", { ...args, createdAt: Date.now() });
+    // Respect user's photo storage preference — if disabled, delete the uploaded blob
     const profile = await ctx.db.query("profiles")
       .withIndex("by_userId", q => q.eq("userId", args.userId))
       .unique();
+    const allowPhoto = profile?.allowPhotoStorage !== false; // default true
+    let finalImageStorageId: string | undefined = args.imageStorageId;
+    if (args.imageStorageId && !allowPhoto) {
+      await ctx.storage.delete(args.imageStorageId);
+      finalImageStorageId = undefined;
+    }
+
+    const scanResultId = await ctx.db.insert("scanResults", {
+      userId: args.userId,
+      items: args.items,
+      rawItems: args.rawItems,
+      totalCal: args.totalCal,
+      totalProtein: args.totalProtein,
+      confidence: args.confidence,
+      imageStorageId: finalImageStorageId as never,
+      edited: false,
+      createdAt: Date.now(),
+    });
+
     if (profile) await ctx.db.patch(profile._id, { scanCount: (profile.scanCount ?? 0) + 1 });
+    return scanResultId;
   },
 });

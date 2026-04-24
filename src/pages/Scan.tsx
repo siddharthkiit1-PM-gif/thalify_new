@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAction, useMutation, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import Navbar from '../components/Navbar'
+import type { Id } from '../../convex/_generated/dataModel'
 
 type MealType = 'breakfast' | 'lunch' | 'snack' | 'dinner'
 type ScanItem = { name: string; portion: string; cal: number; protein: number; carbs: number; fat: number }
@@ -18,19 +19,28 @@ function guessMealType(): MealType {
 
 export default function Scan() {
   const navigate = useNavigate()
+  const generateUploadUrl = useMutation(api.storage.generateUploadUrl)
   const scanMeal = useAction(api.scan.scanMeal)
+  const updateScanItems = useMutation(api.scanFeedback.updateScanItems)
+  const recordScanFeedback = useMutation(api.scanFeedback.recordScanFeedback)
   const logMeal = useMutation(api.meals.logMeal)
   const recentScans = useQuery(api.meals.getRecentLogs)
 
   const [phase, setPhase] = useState<'upload' | 'scanning' | 'result' | 'logged'>('upload')
   const [items, setItems] = useState<ScanItem[]>([])
-  const [totalCal, setTotalCal] = useState(0)
   const [mealType, setMealType] = useState<MealType>(guessMealType())
   const [error, setError] = useState('')
   const [preview, setPreview] = useState('')
+  const [scanResultId, setScanResultId] = useState<Id<'scanResults'> | null>(null)
+  const [edited, setEdited] = useState(false)
+  const [feedback, setFeedback] = useState<'accurate' | 'inaccurate' | 'partial' | null>(null)
+
+  const totalCal = items.reduce((s, i) => s + i.cal, 0)
+  const totalProtein = items.reduce((s, i) => s + i.protein, 0)
 
   const handleFile = useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) { setError('Please upload a JPG or PNG image.'); return }
+    if (file.size > 10 * 1024 * 1024) { setError('Image too large — please use under 7MB.'); return }
     setError('')
     const reader = new FileReader()
     reader.onload = async (e) => {
@@ -39,9 +49,29 @@ export default function Scan() {
       const base64 = dataUrl.split(',')[1]
       setPhase('scanning')
       try {
-        const result = await scanMeal({ imageBase64: base64 })
+        // Upload to Convex storage first so we can keep the photo for accuracy improvements
+        let imageStorageId: Id<'_storage'> | undefined
+        try {
+          const uploadUrl = await generateUploadUrl()
+          const res = await fetch(uploadUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': file.type },
+            body: file,
+          })
+          if (res.ok) {
+            const json = await res.json()
+            imageStorageId = json.storageId as Id<'_storage'>
+          }
+        } catch {
+          // Photo upload is optional — scan still runs
+        }
+
+        const mediaType = (file.type as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif')
+        const result = await scanMeal({ imageBase64: base64, mediaType, imageStorageId })
         setItems(result.items)
-        setTotalCal(result.totalCal)
+        setScanResultId(result.scanResultId as Id<'scanResults'>)
+        setEdited(false)
+        setFeedback(null)
         setPhase('result')
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Couldn't read this photo — try better lighting or a closer shot"
@@ -50,7 +80,7 @@ export default function Scan() {
       }
     }
     reader.readAsDataURL(file)
-  }, [scanMeal])
+  }, [scanMeal, generateUploadUrl])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -58,9 +88,39 @@ export default function Scan() {
     if (file) handleFile(file)
   }, [handleFile])
 
+  function updateItemField(idx: number, field: keyof ScanItem, value: string | number) {
+    const next = [...items]
+    if (field === 'name' || field === 'portion') {
+      next[idx] = { ...next[idx], [field]: value as string }
+    } else {
+      next[idx] = { ...next[idx], [field]: Number(value) }
+    }
+    setItems(next)
+    setEdited(true)
+  }
+
+  function removeItem(idx: number) {
+    setItems(items.filter((_, i) => i !== idx))
+    setEdited(true)
+  }
+
+  function addItem() {
+    setItems([...items, { name: '', portion: '1 serving', cal: 100, protein: 3, carbs: 15, fat: 3 }])
+    setEdited(true)
+  }
+
   async function handleLog() {
+    if (scanResultId && edited) {
+      try { await updateScanItems({ scanResultId, items }) } catch (e) { console.error(e) }
+    }
     await logMeal({ date: todayDate(), mealType, items, totalCal })
     setPhase('logged')
+  }
+
+  async function submitFeedback(fb: 'accurate' | 'inaccurate' | 'partial') {
+    if (!scanResultId) return
+    setFeedback(fb)
+    try { await recordScanFeedback({ scanResultId, feedback: fb }) } catch (e) { console.error(e) }
   }
 
   return (
@@ -68,27 +128,32 @@ export default function Scan() {
       <Navbar />
       <div className="page" style={{ maxWidth: 680 }}>
         <h1 className="serif" style={{ fontSize: 32, marginBottom: 4 }}>Scan Meal</h1>
-        <p style={{ color: 'var(--muted)', marginBottom: 28 }}>Photo to calories in 3 seconds</p>
+        <p style={{ color: 'var(--muted)', marginBottom: 24 }}>Photo to calories in 3 seconds · Edit anything that looks off</p>
 
         {phase === 'upload' && (
-          <div
-            onDrop={handleDrop}
-            onDragOver={e => e.preventDefault()}
-            style={{ border: '2px dashed var(--border)', borderRadius: 18, padding: 48, textAlign: 'center', background: 'var(--sand)', cursor: 'pointer' }}
-            onClick={() => document.getElementById('file-input')?.click()}
-          >
-            <div style={{ fontSize: 40, marginBottom: 12 }}>📷</div>
-            <div style={{ fontWeight: 600, marginBottom: 6 }}>Drop your meal photo here</div>
-            <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 18 }}>or click to upload · JPG / PNG</div>
-            <button className="btn btn-primary">Choose Photo</button>
-            <input id="file-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
-          </div>
+          <>
+            <div
+              onDrop={handleDrop}
+              onDragOver={e => e.preventDefault()}
+              style={{ border: '2px dashed var(--border)', borderRadius: 18, padding: 48, textAlign: 'center', background: 'var(--sand)', cursor: 'pointer' }}
+              onClick={() => document.getElementById('file-input')?.click()}
+            >
+              <div style={{ fontSize: 40, marginBottom: 12 }}>📷</div>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>Drop your meal photo here</div>
+              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 18 }}>or click to upload · JPG / PNG</div>
+              <button className="btn btn-primary">Choose Photo</button>
+              <input id="file-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
+            </div>
+            <div style={{ marginTop: 14, fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
+              💡 <b>Pro tip:</b> include a spoon or coin in the shot for more accurate portion estimation. We keep your photo to improve recognition — turn off in settings anytime.
+            </div>
+          </>
         )}
 
         {phase === 'scanning' && (
           <div style={{ textAlign: 'center', padding: 64, background: 'var(--sand)', borderRadius: 18 }}>
             {preview && <img src={preview} alt="meal" style={{ width: 200, height: 200, objectFit: 'cover', borderRadius: 14, marginBottom: 24 }} />}
-            <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Identifying your meal...</div>
+            <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Identifying your meal…</div>
             <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
               {[0, 1, 2].map(i => (
                 <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--sage-700)', animation: `bounce 1s ${i * 0.2}s infinite` }} />
@@ -99,9 +164,9 @@ export default function Scan() {
 
         {phase === 'result' && (
           <div>
-            {preview && <img src={preview} alt="meal" style={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 16, marginBottom: 20 }} />}
+            {preview && <img src={preview} alt="meal" style={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 16, marginBottom: 16 }} />}
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <div className="label">Meal type</div>
               <select className="input" value={mealType} onChange={e => setMealType(e.target.value as MealType)} style={{ width: 'auto' }}>
                 <option value="breakfast">Breakfast</option>
@@ -111,41 +176,82 @@ export default function Scan() {
               </select>
             </div>
 
-            <div style={{ background: 'var(--sand)', borderRadius: 16, overflow: 'hidden', marginBottom: 16 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 60px 60px 60px', gap: 0, padding: '10px 16px', background: 'var(--cream)', fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                <div>Item</div><div>Portion</div><div>Cal</div><div>Prot</div><div>Carbs</div>
-              </div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>Tap any field to fix Gemini's guess — helps us get better over time.</div>
+
+            <div style={{ background: 'var(--sand)', borderRadius: 16, overflow: 'hidden', marginBottom: 14 }}>
               {items.map((item, i) => (
-                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 60px 60px 60px', gap: 0, padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
-                  <div style={{ fontWeight: 500 }}>{item.name}</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{item.portion}</div>
-                  <div className="mono" style={{ fontWeight: 600 }}>{item.cal}</div>
-                  <div className="mono" style={{ color: 'var(--muted)' }}>{item.protein}g</div>
-                  <div className="mono" style={{ color: 'var(--muted)' }}>{item.carbs}g</div>
+                <div key={i} style={{ padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)', display: 'grid', gridTemplateColumns: '1fr 100px 70px 30px', gap: 8, alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    value={item.name}
+                    onChange={e => updateItemField(i, 'name', e.target.value)}
+                    placeholder="Dish name"
+                    style={{ background: 'transparent', border: 'none', fontWeight: 500, fontSize: 14, padding: 0, outline: 'none', color: 'var(--ink)' }}
+                  />
+                  <input
+                    type="text"
+                    value={item.portion}
+                    onChange={e => updateItemField(i, 'portion', e.target.value)}
+                    placeholder="1 katori"
+                    style={{ background: 'transparent', border: 'none', fontSize: 12.5, color: 'var(--muted)', padding: 0, outline: 'none' }}
+                  />
+                  <input
+                    type="number"
+                    value={item.cal}
+                    onChange={e => updateItemField(i, 'cal', e.target.value)}
+                    min={0}
+                    max={5000}
+                    style={{ background: 'transparent', border: 'none', fontFamily: 'var(--mono, monospace)', fontWeight: 600, fontSize: 14, padding: 0, outline: 'none', textAlign: 'right', width: '100%' }}
+                  />
+                  <button
+                    onClick={() => removeItem(i)}
+                    title="Remove"
+                    style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 18, padding: 0 }}
+                  >×</button>
                 </div>
               ))}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 60px 60px 60px', gap: 0, padding: '12px 16px', borderTop: '2px solid var(--border)', background: 'var(--cream)' }}>
+              <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)', background: 'var(--cream)' }}>
+                <button onClick={addItem} style={{ background: 'none', border: 'none', color: 'var(--sage-700)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+                  + Add missing dish
+                </button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', padding: '12px 16px', borderTop: '2px solid var(--border)', background: 'var(--cream)' }}>
                 <div style={{ fontWeight: 700 }}>Total</div>
-                <div></div>
-                <div className="mono" style={{ fontWeight: 700, color: 'var(--sage-700)' }}>{totalCal}</div>
+                <div className="mono" style={{ fontWeight: 700, color: 'var(--sage-700)' }}>{totalCal} cal · {Math.round(totalProtein)}g protein</div>
               </div>
             </div>
 
+            {edited && <div style={{ fontSize: 12, color: 'var(--sage-700)', marginBottom: 12, padding: '6px 10px', background: 'var(--sage-100, #EEF7EC)', borderRadius: 8 }}>✓ Your edits will be saved when you log this meal</div>}
+
             <div style={{ display: 'flex', gap: 12 }}>
-              <button className="btn btn-secondary" onClick={() => setPhase('upload')}>Try Another Photo</button>
-              <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleLog}>Log This Meal</button>
+              <button className="btn btn-secondary" onClick={() => { setPhase('upload'); setItems([]); setPreview('') }}>Retake</button>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleLog} disabled={items.length === 0}>Log This Meal</button>
             </div>
           </div>
         )}
 
         {phase === 'logged' && (
-          <div style={{ textAlign: 'center', padding: 48, background: 'var(--sand)', borderRadius: 18 }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
-            <div className="serif" style={{ fontSize: 24, marginBottom: 8 }}>Meal logged!</div>
-            <div style={{ color: 'var(--muted)', marginBottom: 24 }}>{totalCal} cal added to today&apos;s log</div>
+          <div style={{ background: 'var(--sand)', borderRadius: 18, padding: 32, textAlign: 'center' }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
+            <div className="serif" style={{ fontSize: 24, marginBottom: 6 }}>Meal logged!</div>
+            <div style={{ color: 'var(--muted)', marginBottom: 24 }}>{totalCal} cal added to today's log</div>
+
+            {feedback === null ? (
+              <>
+                <div style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 12, fontWeight: 600 }}>Was this scan accurate?</div>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 24 }}>
+                  <button onClick={() => submitFeedback('accurate')} style={{ padding: '8px 16px', border: '1px solid var(--border)', background: 'white', borderRadius: 10, cursor: 'pointer', fontSize: 14 }}>👍 Spot on</button>
+                  <button onClick={() => submitFeedback('partial')} style={{ padding: '8px 16px', border: '1px solid var(--border)', background: 'white', borderRadius: 10, cursor: 'pointer', fontSize: 14 }}>🤔 Close</button>
+                  <button onClick={() => submitFeedback('inaccurate')} style={{ padding: '8px 16px', border: '1px solid var(--border)', background: 'white', borderRadius: 10, cursor: 'pointer', fontSize: 14 }}>👎 Off</button>
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: 13, color: 'var(--sage-700)', marginBottom: 24 }}>Thanks — your feedback trains the model.</div>
+            )}
+
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-              <button className="btn btn-secondary" onClick={() => { setPhase('upload'); setItems([]); setPreview('') }}>Scan Another</button>
-              <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
+              <button className="btn btn-secondary" onClick={() => { setPhase('upload'); setItems([]); setPreview(''); setScanResultId(null); setFeedback(null); setEdited(false) }}>Scan Another</button>
+              <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>Dashboard</button>
             </div>
           </div>
         )}
