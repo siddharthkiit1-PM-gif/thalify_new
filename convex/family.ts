@@ -117,9 +117,14 @@ Refine the recommendations.`;
 
   const advice = extractJson<AiAdvice>(raw);
 
-  const byName = new Map(baseline.map(d => [d.name.toLowerCase(), d]));
+  const normalizeName = (s: string) =>
+    s.toLowerCase().trim().replace(/s\b/g, "").replace(/\s+/g, " ").replace(/[^a-z ]/g, "");
+  const baselineKeys = new Set(baseline.map(d => normalizeName(d.name)));
+  const baselineMatcherKeys = new Set(baseline.map(d => matchDish(d.name).key));
+
   const enriched: OptimizedDish[] = baseline.map(d => {
-    const aiDish = advice.dishes?.find(x => x.name.toLowerCase() === d.name.toLowerCase());
+    const dKey = normalizeName(d.name);
+    const aiDish = advice.dishes?.find(x => normalizeName(x.name) === dKey);
     if (aiDish && (aiDish.action === "keep" || aiDish.action === "reduce" || aiDish.action === "skip")) {
       return { ...d, action: aiDish.action, recommendation: aiDish.recommendation };
     }
@@ -128,8 +133,10 @@ Refine the recommendations.`;
 
   if (advice.additions && Array.isArray(advice.additions)) {
     for (const add of advice.additions) {
-      if (byName.has(add.name.toLowerCase())) continue;
+      const addKey = normalizeName(add.name);
+      if (baselineKeys.has(addKey)) continue;
       const matched = matchDish(add.name);
+      if (baselineMatcherKeys.has(matched.key)) continue;
       enriched.push({
         name: add.name,
         action: "add",

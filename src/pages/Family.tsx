@@ -59,7 +59,12 @@ export default function Family() {
     setLogged(true)
   }
 
-  const afterCal = result ? result.filter(r => r.action !== 'skip').reduce((acc, r) => acc + r.cal, 0) : 0
+  const beforeCal = result ? result.filter(r => r.action !== 'add').reduce((acc, r) => acc + r.cal, 0) : 0
+  const afterCal = result ? result.filter(r => r.action !== 'skip').reduce((acc, r) => {
+    const multiplier = r.action === 'reduce' ? 0.5 : 1
+    return acc + r.cal * multiplier
+  }, 0) : 0
+  const calorieDelta = afterCal - beforeCal
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
@@ -104,14 +109,26 @@ export default function Family() {
         {result && (
           <div className="fade-in">
             {/* Before / After */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
-              {([['Before', result.reduce((acc, r) => acc + r.cal, 0)], ['After', afterCal]] as [string, number][]).map(([label, cal]) => (
-                <div key={label} style={{ background: 'var(--sand)', borderRadius: 14, padding: 18, textAlign: 'center' }}>
-                  <div className="label" style={{ marginBottom: 6 }}>{label}</div>
-                  <div className="mono" style={{ fontSize: 28, fontWeight: 700, color: label === 'After' ? 'var(--sage-700)' : 'var(--ink)' }}>{cal} cal</div>
-                </div>
-              ))}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 8 }}>
+              <div style={{ background: 'var(--sand)', borderRadius: 14, padding: 18, textAlign: 'center' }}>
+                <div className="label" style={{ marginBottom: 6 }}>Your Plate</div>
+                <div className="mono" style={{ fontSize: 28, fontWeight: 700, color: 'var(--ink)' }}>{Math.round(beforeCal)} cal</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>as entered</div>
+              </div>
+              <div style={{ background: 'var(--sage-100, #EEF7EC)', borderRadius: 14, padding: 18, textAlign: 'center' }}>
+                <div className="label" style={{ marginBottom: 6, color: 'var(--sage-700)' }}>Recommended</div>
+                <div className="mono" style={{ fontSize: 28, fontWeight: 700, color: 'var(--sage-700)' }}>{Math.round(afterCal)} cal</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>after Thalify's edits</div>
+              </div>
             </div>
+            {calorieDelta !== 0 && (
+              <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>
+                {calorieDelta > 0
+                  ? `+${Math.round(calorieDelta)} cal added (mostly protein/fiber for balance)`
+                  : `${Math.round(calorieDelta)} cal reduced`}
+              </div>
+            )}
+            {calorieDelta === 0 && <div style={{ marginBottom: 20 }} />}
 
             {/* Per-dish guidance */}
             <div style={{ background: 'var(--sand)', borderRadius: 16, overflow: 'hidden', marginBottom: 20 }}>
