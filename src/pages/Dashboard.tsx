@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../../convex/_generated/api'
 import Navbar from '../components/Navbar'
 import Progress from '../components/ui/Progress'
+import BodyStatsCard from '../components/BodyStatsCard'
 
 function todayDate() { return new Date().toISOString().split('T')[0] }
 
@@ -50,6 +51,8 @@ export default function Dashboard() {
             {greeting()}{currentUser?.name ? `, ${currentUser.name.split(' ')[0]}` : ''}
           </div>
           <h1 className="serif" style={{ fontSize: 32, marginBottom: 24 }}>Today's Overview</h1>
+
+          <BodyStatsCard profile={profile as never} />
 
           {/* Calorie card */}
           <div style={{ background: 'var(--sand)', borderRadius: 18, padding: 24, marginBottom: 16 }}>

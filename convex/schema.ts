@@ -15,6 +15,20 @@ export default defineSchema({
     onboardingComplete: v.boolean(),
     calorieGoal: v.number(),
     scanCount: v.number(),
+    // Body stats (optional — computed TDEE + personalized target when filled)
+    weightKg: v.optional(v.number()),
+    heightCm: v.optional(v.number()),
+    age: v.optional(v.number()),
+    sex: v.optional(v.union(v.literal("male"), v.literal("female"), v.literal("other"))),
+    activityLevel: v.optional(v.union(
+      v.literal("sedentary"),
+      v.literal("light"),
+      v.literal("moderate"),
+      v.literal("active"),
+      v.literal("very_active"),
+    )),
+    bodyFatPct: v.optional(v.number()),
+    tdee: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
 
   mealLogs: defineTable({

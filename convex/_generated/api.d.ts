@@ -19,6 +19,7 @@ import type * as email from "../email.js";
 import type * as family from "../family.js";
 import type * as http from "../http.js";
 import type * as lab from "../lab.js";
+import type * as lib_calorie from "../lib/calorie.js";
 import type * as meals from "../meals.js";
 import type * as patterns from "../patterns.js";
 import type * as scan from "../scan.js";
@@ -43,6 +44,7 @@ declare const fullApi: ApiFromModules<{
   family: typeof family;
   http: typeof http;
   lab: typeof lab;
+  "lib/calorie": typeof lib_calorie;
   meals: typeof meals;
   patterns: typeof patterns;
   scan: typeof scan;

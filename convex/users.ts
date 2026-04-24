@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { calculateTDEE, calculateTarget } from "./lib/calorie";
 
 export const getProfile = query({
   args: {},
@@ -63,5 +64,55 @@ export const createProfile = mutation({
       onboardingComplete: true,
       scanCount: 0,
     });
+  },
+});
+
+export const updateBodyStats = mutation({
+  args: {
+    weightKg: v.number(),
+    heightCm: v.number(),
+    age: v.number(),
+    sex: v.union(v.literal("male"), v.literal("female"), v.literal("other")),
+    activityLevel: v.union(
+      v.literal("sedentary"),
+      v.literal("light"),
+      v.literal("moderate"),
+      v.literal("active"),
+      v.literal("very_active"),
+    ),
+    bodyFatPct: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    if (args.weightKg < 30 || args.weightKg > 300) throw new Error("Weight must be between 30 and 300 kg");
+    if (args.heightCm < 100 || args.heightCm > 250) throw new Error("Height must be between 100 and 250 cm");
+    if (args.age < 13 || args.age > 100) throw new Error("Age must be between 13 and 100");
+    if (args.bodyFatPct !== undefined && (args.bodyFatPct < 3 || args.bodyFatPct > 60)) {
+      throw new Error("Body fat % must be between 3 and 60");
+    }
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+    if (!profile) throw new Error("Complete onboarding first");
+
+    const { tdee } = calculateTDEE(args);
+    const target = calculateTarget(tdee, profile.goal);
+
+    await ctx.db.patch(profile._id, {
+      weightKg: args.weightKg,
+      heightCm: args.heightCm,
+      age: args.age,
+      sex: args.sex,
+      activityLevel: args.activityLevel,
+      bodyFatPct: args.bodyFatPct,
+      tdee,
+      calorieGoal: target,
+    });
+
+    return { tdee, target };
   },
 });
