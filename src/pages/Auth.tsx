@@ -11,7 +11,7 @@ export default function Auth() {
   const [searchParams] = useSearchParams()
   const prefilledEmail = searchParams.get('email') ?? ''
   const isFromWaitlist = searchParams.get('ref') === 'waitlist'
-  const { signIn } = useAuthActions()
+  const { signIn, signOut } = useAuthActions()
   const sendSignupWelcome = useAction(api.accountEmails.sendSignupWelcome)
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth()
   const profile = useQuery(api.users.getProfile)
@@ -21,8 +21,12 @@ export default function Auth() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitted, setSubmitted] = useState(false)
+  const [signupComplete, setSignupComplete] = useState(false)
+  const [createdEmail, setCreatedEmail] = useState('')
+  const [createdName, setCreatedName] = useState('')
 
   useEffect(() => {
+    if (signupComplete) return
     if (!submitted && !isAuthenticated) return
     if (authLoading) return
     if (!isAuthenticated) return
@@ -32,7 +36,7 @@ export default function Auth() {
     } else {
       navigate('/dashboard', { replace: true })
     }
-  }, [submitted, authLoading, isAuthenticated, profile, navigate])
+  }, [signupComplete, submitted, authLoading, isAuthenticated, profile, navigate])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -49,6 +53,12 @@ export default function Auth() {
         sendSignupWelcome({ email: trimmedEmail, name: trimmedName }).catch(err => {
           console.error('Signup welcome email failed:', err)
         })
+        setCreatedEmail(trimmedEmail)
+        setCreatedName(trimmedName)
+        try { await signOut() } catch { /* ignore */ }
+        setPassword('')
+        setSignupComplete(true)
+        setSubmitted(false)
       } else {
         await signIn('password', { email: trimmedEmail, password, flow: 'signIn' })
       }
@@ -66,7 +76,60 @@ export default function Auth() {
     }
   }
 
+  function goToSignIn() {
+    setSignupComplete(false)
+    setTab('login')
+    setEmail(createdEmail)
+    setName('')
+    setPassword('')
+    setError('')
+  }
+
   const showLoading = submitted && !error
+
+  if (signupComplete) {
+    const firstName = createdName.split(/\s+/)[0] || 'there'
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--cream)', padding: 20 }}>
+        <div style={{ width: '100%', maxWidth: 440, padding: 40, background: 'var(--sand)', borderRadius: 20, border: '1px solid var(--border)', textAlign: 'center' }}>
+          <div className="brand" style={{ marginBottom: 24, justifyContent: 'center' }}>
+            <div className="brand-mark">Th</div>
+            <span style={{ fontSize: 18, fontWeight: 600 }}>Thalify</span>
+          </div>
+
+          <div style={{
+            width: 64, height: 64, borderRadius: '50%', background: 'var(--sage-100, #EEF7EC)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px',
+            fontSize: 32,
+          }}>✓</div>
+
+          <h1 className="serif" style={{ fontSize: 26, marginBottom: 10, lineHeight: 1.3 }}>
+            Welcome to Thalify, {firstName}!
+          </h1>
+          <p style={{ fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.6, marginBottom: 20 }}>
+            Your account is created. We've sent a welcome email to<br />
+            <b style={{ color: 'var(--ink)' }}>{createdEmail}</b>
+          </p>
+
+          <div style={{ background: 'var(--cream)', borderRadius: 12, padding: '14px 16px', marginBottom: 24, textAlign: 'left' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--sage-700)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+              📧 Check your inbox
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>
+              Look for "Welcome to Thalify" from <b>Thalify</b>. Also check your spam folder just in case.
+            </div>
+          </div>
+
+          <button onClick={goToSignIn} className="btn btn-primary" style={{ width: '100%', marginBottom: 12 }}>
+            Sign in to continue →
+          </button>
+          <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+            Use the password you just set.
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--cream)' }}>
@@ -76,7 +139,7 @@ export default function Auth() {
           <span style={{ fontSize: 18, fontWeight: 600 }}>Thalify</span>
         </div>
 
-        {isFromWaitlist && (
+        {isFromWaitlist && tab === 'register' && (
           <div style={{ background: 'var(--sage-100, #EEF7EC)', color: 'var(--sage-700)', padding: '12px 14px', borderRadius: 10, marginBottom: 20, fontSize: 13, lineHeight: 1.5 }}>
             <div style={{ fontWeight: 700, marginBottom: 2 }}>Welcome — your early access is active.</div>
             <div style={{ color: 'var(--ink-2)' }}>Set a password to create your account.</div>
@@ -122,12 +185,6 @@ export default function Auth() {
           <button type="submit" className="btn btn-primary" disabled={showLoading} style={{ marginTop: 4 }}>
             {showLoading ? (tab === 'register' ? 'Creating account…' : 'Signing in…') : (tab === 'login' ? 'Sign In' : 'Create Account')}
           </button>
-
-          {showLoading && isAuthenticated && profile === undefined && (
-            <div style={{ color: 'var(--muted)', fontSize: 12, textAlign: 'center', marginTop: 4 }}>
-              Loading your account…
-            </div>
-          )}
         </form>
       </div>
     </div>
