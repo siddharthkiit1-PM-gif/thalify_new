@@ -9,13 +9,26 @@ const WINDOWS: Record<string, number> = {
 };
 
 export const LIMITS = {
+  // Unlimited / allowlisted users (see lib/tiers.ts)
   scan: { perMinute: 10, perHour: 60, perDay: 200 },
   chat: { perMinute: 20, perHour: 200, perDay: 1000 },
+  // Free-tier caps for regular users — 5 scans + 5 chats per day
+  scan_free: { perMinute: 2, perHour: 5, perDay: 5 },
+  chat_free: { perMinute: 3, perHour: 5, perDay: 5 },
   family: { perMinute: 10, perHour: 40, perDay: 100 },
   lab: { perMinute: 5, perHour: 20, perDay: 40 },
   patterns: { perMinute: 5, perHour: 20, perDay: 40 },
   waitlist: { perMinute: 3, perHour: 10, perDay: 30 },
   signupWelcome: { perMinute: 2, perHour: 5, perDay: 10 },
+};
+
+/**
+ * User-friendly messages for when a user hits the 5/day free cap.
+ * These are keyed off the free-tier action names.
+ */
+const FREE_TIER_DAILY_MESSAGES: Record<string, string> = {
+  scan_free: "Free tier limit reached — you've used your 5 scans for today. Resets at midnight IST.",
+  chat_free: "Free tier limit reached — you've used your 5 Health Buddy chats for today. Resets at midnight IST.",
 };
 
 /**
@@ -49,7 +62,8 @@ export async function checkRateLimit(
     throw new Error(`Hourly limit reached for this feature. Please try again later.`);
   }
   if (last1d >= limits.perDay) {
-    throw new Error(`Daily limit reached for this feature. Resets in 24 hours.`);
+    const customMsg = FREE_TIER_DAILY_MESSAGES[action as string];
+    throw new Error(customMsg ?? `Daily limit reached for this feature. Resets in 24 hours.`);
   }
 
   const updated = [...events, now];

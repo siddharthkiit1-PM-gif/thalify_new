@@ -9,6 +9,7 @@ import Chat from './pages/Chat'
 import Family from './pages/Family'
 import Lab from './pages/Lab'
 import Patterns from './pages/Patterns'
+import Admin from './pages/Admin'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -51,6 +52,11 @@ export default function App() {
       <Route path="/patterns" element={
         <ProtectedRoute requireAuth requireOnboarding>
           <Patterns />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin" element={
+        <ProtectedRoute requireAuth>
+          <Admin />
         </ProtectedRoute>
       } />
       <Route path="*" element={<Navigate to="/" replace />} />

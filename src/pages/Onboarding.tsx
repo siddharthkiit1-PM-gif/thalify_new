@@ -8,6 +8,7 @@ type DietType = 'veg' | 'veg_eggs' | 'nonveg' | 'jain' | 'vegan'
 type City = 'bangalore' | 'mumbai' | 'delhi' | 'other'
 
 const DISLIKE_CHIPS = ['Paneer', 'Bitter gourd', 'Beetroot', 'Mushroom']
+const STEPS = 4
 
 export default function Onboarding() {
   const navigate = useNavigate()
@@ -19,6 +20,7 @@ export default function Onboarding() {
   const [city, setCity] = useState<City | null>(null)
   const [allergies, setAllergies] = useState('')
   const [dislikes, setDislikes] = useState<string[]>([])
+  const [allowPhotoStorage, setAllowPhotoStorage] = useState<boolean | null>(null)
   const [saving, setSaving] = useState(false)
 
   function toggleDislike(item: string) {
@@ -26,9 +28,16 @@ export default function Onboarding() {
   }
 
   async function finish() {
-    if (!goal || !dietType || !city) return
+    if (!goal || !dietType || !city || allowPhotoStorage === null) return
     setSaving(true)
-    await createProfile({ goal, dietType, city, allergies: allergies ? [allergies] : [], dislikes })
+    await createProfile({
+      goal,
+      dietType,
+      city,
+      allergies: allergies ? [allergies] : [],
+      dislikes,
+      allowPhotoStorage,
+    })
     navigate('/dashboard')
   }
 
@@ -36,9 +45,10 @@ export default function Onboarding() {
     <div style={{ minHeight: '100vh', background: 'var(--cream)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ width: '100%', maxWidth: 520, padding: 40 }}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 36 }}>
-          {[1, 2, 3].map(s => (
-            <div key={s} style={{ flex: 1, height: 4, borderRadius: 99, background: s <= step ? 'var(--sage-700)' : 'var(--border)' }} />
-          ))}
+          {Array.from({ length: STEPS }).map((_, i) => {
+            const s = i + 1
+            return <div key={s} style={{ flex: 1, height: 4, borderRadius: 99, background: s <= step ? 'var(--sage-700)' : 'var(--border)' }} />
+          })}
         </div>
 
         {step === 1 && (
@@ -136,7 +146,49 @@ export default function Onboarding() {
 
             <div style={{ display: 'flex', gap: 12 }}>
               <button className="btn btn-secondary" onClick={() => setStep(2)}>← Back</button>
-              <button className="btn btn-primary" style={{ flex: 1 }} disabled={!city || saving} onClick={finish}>
+              <button className="btn btn-primary" style={{ flex: 1 }} disabled={!city} onClick={() => setStep(4)}>Continue →</button>
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="fade-in">
+            <h2 className="serif" style={{ fontSize: 30, marginBottom: 8 }}>One last thing</h2>
+            <p style={{ color: 'var(--ink-2)', marginBottom: 24, lineHeight: 1.55 }}>
+              When you scan a meal, we can keep the photo to improve how accurately Thalify identifies Indian food over time. You can turn this off any time from your profile.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+              <div
+                onClick={() => setAllowPhotoStorage(true)}
+                style={{ padding: '18px 20px', borderRadius: 14, border: `2px solid ${allowPhotoStorage === true ? 'var(--sage-700)' : 'var(--border)'}`, background: allowPhotoStorage === true ? 'var(--sage-100)' : 'var(--sand)', cursor: 'pointer' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+                  <span style={{ fontSize: 20 }}>📸</span>
+                  <div style={{ fontWeight: 600 }}>Yes, keep my photos</div>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--muted)', marginLeft: 32 }}>Helps us improve scan accuracy for everyone. Stored securely, never shared.</div>
+              </div>
+
+              <div
+                onClick={() => setAllowPhotoStorage(false)}
+                style={{ padding: '18px 20px', borderRadius: 14, border: `2px solid ${allowPhotoStorage === false ? 'var(--sage-700)' : 'var(--border)'}`, background: allowPhotoStorage === false ? 'var(--sage-100)' : 'var(--sand)', cursor: 'pointer' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+                  <span style={{ fontSize: 20 }}>🔒</span>
+                  <div style={{ fontWeight: 600 }}>No, delete after scanning</div>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--muted)', marginLeft: 32 }}>Photos are analysed then immediately discarded. Scan still works normally.</div>
+              </div>
+            </div>
+
+            <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 20, lineHeight: 1.55 }}>
+              We never share photos with third parties. We only use them to make scan recognition better for Indian food.
+            </div>
+
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button className="btn btn-secondary" onClick={() => setStep(3)}>← Back</button>
+              <button className="btn btn-primary" style={{ flex: 1 }} disabled={allowPhotoStorage === null || saving} onClick={finish}>
                 {saving ? 'Saving…' : 'Start My Plan →'}
               </button>
             </div>

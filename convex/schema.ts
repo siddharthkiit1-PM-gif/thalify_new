@@ -29,6 +29,8 @@ export default defineSchema({
     )),
     bodyFatPct: v.optional(v.number()),
     tdee: v.optional(v.number()),
+    // User can opt-out of photo storage (defaults to true = store photos for training)
+    allowPhotoStorage: v.optional(v.boolean()),
   }).index("by_userId", ["userId"]),
 
   mealLogs: defineTable({
@@ -50,7 +52,10 @@ export default defineSchema({
   scanResults: defineTable({
     userId: v.id("users"),
     imageUrl: v.optional(v.string()),
+    imageStorageId: v.optional(v.id("_storage")),
     confidence: v.number(),
+    // items is the FINAL version the user logged (may equal rawItems if untouched).
+    // Kept on top level for backwards compatibility with existing code.
     items: v.array(v.object({
       name: v.string(),
       portion: v.string(),
@@ -59,10 +64,22 @@ export default defineSchema({
       carbs: v.number(),
       fat: v.number(),
     })),
+    // rawItems = what Gemini returned, BEFORE any user edits (training signal).
+    rawItems: v.optional(v.array(v.object({
+      name: v.string(),
+      portion: v.string(),
+      cal: v.number(),
+      protein: v.number(),
+      carbs: v.number(),
+      fat: v.number(),
+    }))),
+    edited: v.optional(v.boolean()),
+    userFeedback: v.optional(v.union(v.literal("accurate"), v.literal("inaccurate"), v.literal("partial"))),
+    feedbackNotes: v.optional(v.string()),
     totalCal: v.number(),
     totalProtein: v.optional(v.number()),
     createdAt: v.number(),
-  }).index("by_userId", ["userId"]),
+  }).index("by_userId", ["userId"]).index("by_createdAt", ["createdAt"]),
 
   chatMessages: defineTable({
     userId: v.id("users"),
