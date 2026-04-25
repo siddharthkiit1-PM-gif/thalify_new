@@ -14,6 +14,49 @@ body { overflow-x: hidden; background: var(--cream); }
   animation: pulse-dot 1.5s ease-in-out infinite; vertical-align: middle;
 }
 
+/* Channel bar — sits below launch bar, signals what's live now vs coming */
+.channel-bar {
+  background: linear-gradient(90deg, #F5F0E6 0%, #ECF1ED 50%, #E8F0F4 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 7px 16px;
+  text-align: center;
+  font-size: 12px;
+  font-family: var(--mono);
+  letter-spacing: 0.2px;
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.channel-now {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink);
+  font-weight: 600;
+}
+.channel-sep { color: var(--muted); opacity: 0.6; }
+.channel-soon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+.channel-soon-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #25D366;
+  opacity: 0.7;
+}
+@media (max-width: 640px) {
+  .channel-bar { font-size: 11px; gap: 6px; padding: 6px 12px; }
+  .channel-sep { display: none; }
+}
+
 .waitlist-nav {
   height: 68px; display: flex; align-items: center; justify-content: space-between;
   max-width: 1200px; margin: 0 auto; padding: 0 40px;
@@ -183,10 +226,30 @@ body { overflow-x: hidden; background: var(--cream); }
 .pillar-body { padding: 24px 28px 28px; }
 .pillar-desc { font-size: 14px; color: var(--ink-2); line-height: 1.6; margin-bottom: 20px; }
 
-.wa-mock { background: #E5DDD5; border-radius: 10px; padding: 12px; font-size: 12.5px; line-height: 1.45; }
-.wa-bubble { background: #fff; border-radius: 8px; padding: 7px 10px; max-width: 85%; margin-bottom: 5px; box-shadow: 0 1px 1px rgba(0,0,0,0.08); }
-.wa-bubble.out { background: #DCF8C6; margin-left: auto; }
-.wa-time { font-size: 9.5px; color: #667781; float: right; margin-left: 8px; }
+/* Telegram-styled chat mock — calm blue, light cloud bg */
+.tg-mock {
+  background: linear-gradient(180deg, #E7F1F8 0%, #DEEDF5 100%);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  border: 1px solid rgba(34, 166, 220, 0.15);
+}
+.tg-bubble {
+  background: #fff;
+  border-radius: 12px 12px 12px 4px;
+  padding: 8px 11px;
+  max-width: 85%;
+  margin-bottom: 6px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  color: #0E1E2E;
+}
+.tg-bubble.out {
+  background: #EFFDDE;
+  border-radius: 12px 12px 4px 12px;
+  margin-left: auto;
+}
+.tg-time { font-size: 9.5px; color: #5C7A8A; float: right; margin-left: 8px; padding-top: 1px; }
 
 .scan-mock { background: var(--sand); border-radius: 10px; padding: 12px; }
 .scan-row { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; font-size: 12.5px; border-bottom: 1px dashed var(--border); }

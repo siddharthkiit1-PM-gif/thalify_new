@@ -157,11 +157,6 @@ export default function Dashboard() {
             <div style={{ fontWeight: 600, textTransform: 'capitalize', marginBottom: 4 }}>{profile?.goal ?? '—'}</div>
             <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{calorieGoal} kcal / day</div>
           </div>
-          <div style={{ background: 'var(--sage-100)', borderRadius: 18, padding: 20 }}>
-            <div style={{ fontSize: 13, color: 'var(--sage-700)', fontWeight: 600, marginBottom: 6 }}>💬 WhatsApp Coach</div>
-            <div style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5, marginBottom: 12 }}>Get nudges and meal reminders on WhatsApp.</div>
-            <button className="btn btn-secondary btn-sm" style={{ width: '100%' }}>Connect WhatsApp</button>
-          </div>
         </div>
       </div>
     </div>
