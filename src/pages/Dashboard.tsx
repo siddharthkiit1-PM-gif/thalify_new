@@ -53,10 +53,12 @@ export default function Dashboard() {
       <Navbar />
       <div className="page" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 300px', gap: isMobile ? 16 : 28 }}>
         <div>
-          <div style={{ marginBottom: 6, color: 'var(--muted)', fontSize: 14 }}>
-            {greeting()}{currentUser?.name ? `, ${currentUser.name.split(' ')[0]}` : ''}
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10 }}>
+            {greeting()} · {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
           </div>
-          <h1 className="serif" style={{ fontSize: 32, marginBottom: 24 }}>Today's Overview</h1>
+          <h1 className="serif" style={{ fontSize: 36, marginBottom: 24, lineHeight: 1.1, letterSpacing: '-0.015em' }}>
+            {currentUser?.name ? <>Hi {currentUser.name.split(' ')[0]}, here's where you stand.</> : <>Here's where you stand.</>}
+          </h1>
 
           <NotificationBanner />
 
@@ -95,10 +97,10 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* AI Insight */}
-          <div style={{ background: 'var(--sage-100)', borderRadius: 16, padding: 20, marginBottom: 16 }}>
-            <div className="label" style={{ color: 'var(--sage-700)', marginBottom: 6 }}>🧠 AI Insight</div>
-            <div style={{ fontSize: 14, lineHeight: 1.6 }}>{insightMsg}</div>
+          {/* Coach insight */}
+          <div style={{ background: 'var(--sage-100)', borderRadius: 16, padding: 20, marginBottom: 16, borderLeft: '3px solid var(--sage-700)' }}>
+            <div className="label" style={{ color: 'var(--sage-700)', marginBottom: 6 }}>From your coach</div>
+            <div style={{ fontSize: 14.5, lineHeight: 1.65, color: 'var(--ink)' }}>{insightMsg}</div>
           </div>
 
           {/* Quick actions */}

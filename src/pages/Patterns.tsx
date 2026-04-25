@@ -46,10 +46,13 @@ export default function Patterns() {
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
       <Navbar />
       <div className="page" style={{ maxWidth: 680, paddingTop: 32 }}>
-        <div style={{ marginBottom: 24 }}>
-          <h1 className="serif" style={{ fontSize: 28, marginBottom: 6 }}>Behavioral Patterns</h1>
-          <p style={{ color: 'var(--muted)', fontSize: 15 }}>
-            Claude analyzes your meal history to surface eating patterns and personalized tips.
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10 }}>
+            Insight · Last 28 days
+          </div>
+          <h1 className="serif" style={{ fontSize: 36, marginBottom: 8, lineHeight: 1.1, letterSpacing: '-0.015em' }}>The shape of your eating.</h1>
+          <p style={{ color: 'var(--ink-2)', fontSize: 15.5, lineHeight: 1.55 }}>
+            We read every meal you've logged and surface the patterns — what's working, what's quietly off, and one small thing to try next week.
           </p>
         </div>
 
@@ -88,8 +91,8 @@ export default function Patterns() {
         {!hasEnoughData && (
           <div style={{ background: 'var(--sand)', borderRadius: 16, padding: 24, textAlign: 'center', marginBottom: 24 }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>📊</div>
-            <div style={{ fontWeight: 600, marginBottom: 6 }}>Log {3 - daysLogged} more day{3 - daysLogged !== 1 ? 's' : ''} to unlock patterns</div>
-            <div style={{ fontSize: 14, color: 'var(--muted)' }}>Claude needs at least 3 days of meals to identify meaningful patterns.</div>
+            <div className="serif" style={{ fontSize: 22, marginBottom: 6, letterSpacing: '-0.01em' }}>Log {3 - daysLogged} more day{3 - daysLogged !== 1 ? 's' : ''} to unlock patterns</div>
+            <div style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.55 }}>Three days is the minimum we need to see honest patterns. Two meals tells us very little; a week tells us everything.</div>
           </div>
         )}
 
@@ -105,7 +108,7 @@ export default function Patterns() {
             </button>
             {loading && (
               <div style={{ marginTop: 16, color: 'var(--muted)', fontSize: 14 }}>
-                Claude is reviewing {daysLogged} days of meals…
+                Reading through {daysLogged} days of meals…
               </div>
             )}
             {error && (

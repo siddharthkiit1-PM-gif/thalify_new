@@ -241,10 +241,17 @@ export default function Auth() {
   // Default: login / register
   return wrapper(
     <>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '0.2em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>
+        {tab === 'login' ? 'Welcome back' : 'Get started'}
+      </div>
+      <h2 className="serif" style={{ fontSize: 24, marginBottom: 18, letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+        {tab === 'login' ? 'Sign in to your kitchen.' : 'Create your account.'}
+      </h2>
+
       {isFromWaitlist && tab === 'register' && (
         <div style={{ background: 'var(--sage-100, #EEF7EC)', color: 'var(--sage-700)', padding: '12px 14px', borderRadius: 10, marginBottom: 20, fontSize: 13, lineHeight: 1.5 }}>
-          <div style={{ fontWeight: 700, marginBottom: 2 }}>Welcome — your early access is active.</div>
-          <div style={{ color: 'var(--ink-2)' }}>Set a password to create your account.</div>
+          <div style={{ fontWeight: 700, marginBottom: 2 }}>Your early access is active.</div>
+          <div style={{ color: 'var(--ink-2)' }}>Set a password — that's it. You're locked in as one of the first 500.</div>
         </div>
       )}
 
