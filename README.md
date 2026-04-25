@@ -9,16 +9,36 @@
 
 ---
 
-## What it does
+## What it actually is
 
-Thalify is built for the way Indians actually eat — at the family table, with one shared pot, in five languages, with food the diet apps don't recognise. Every part of the product respects that:
+Most Indians who try to lose weight either give up or eat sad. Every diet app on the App Store was built for someone who shops at Whole Foods and meal-preps quinoa on Sundays — not someone whose dinner is whatever Mummy cooked tonight, eaten in five different katoris off a shared plate.
 
-- 📷 **Photo scan** — point at any meal (thali, restaurant plate, lunchbox) → AI identifies every dish, returns calories + macros + portion in Indian units (katori, roti, plate)
-- 💬 **Health Buddy chat** — ask anything in English, Hindi, Hinglish, Tamil; the coach knows your goal, your day's logs, your dislikes, the time of day
-- ✈️ **Telegram nudges** — gentle, personalized push messages 30 seconds after every meal log ("Sam, walk 15 min after that lunch — your blood sugar will thank you"). Two-way: send a photo on Telegram, the bot scans + logs it. Send a question, the AI replies.
-- 🧪 **Lab report analysis** — upload your blood work photo → get specific Indian foods to eat more / less of, mapped to your markers (HbA1c, B12, iron, cholesterol, TSH)
-- 🍛 **Family meal optimizer** — tell us what Mummy made tonight; we tell you what to keep, halve, or skip — for *your* goal, not the family's
-- 📊 **Pattern insights** — 28-day eating heatmap + weekly AI analysis of your wins and what to improve
+**Thalify is built for the second person.**
+
+You snap a photo of your thali. In three seconds, you see the calories — in Indian terms. *"Rajma, 1 katori — 180 cal. Roti, 2 pieces — 160 cal. Filter coffee with jaggery — 60 cal."* Not "1 cup beans" or "1 serving of bread."
+
+You ask the coach a question — in English, Hindi, Hinglish, whatever lands first. It already knows what you logged at lunch, what your goal is, what you don't like, and that it's 9 PM in Bengaluru. The advice comes back as *"have curd-rice, skip the second roti, walk 15 min after"* — not *"consider a balanced macronutrient profile."*
+
+An hour after dinner, you get one line in Telegram: *"You're 200 cal under today, Sam. Glass of water + a short walk and you sleep great."* No essay, no preachy tone, no ten-emoji preamble.
+
+You upload your blood test once a quarter. Instead of *"improve your HbA1c"*, you get *"swap white rice for brown rice 4 days a week, add 1 boiled egg at breakfast for protein."* Specific. Indian. Doable.
+
+You tell the family meal optimizer what's on tonight's menu — *dal, rice, paneer, roti.* It tells you which to keep, which to halve, which to skip — for **your** number, not the family's average. Same plate, different portions, no separate "diet food."
+
+### The honest version of what's inside
+
+| Surface | What it does | Where it lives |
+|---|---|---|
+| **Photo scan** | Identifies every dish on your plate, returns Indian-portion macros | `/scan`, plus 📷 to the Telegram bot |
+| **Health Buddy chat** | Coach trained on Indian food + your live profile + today's meals + the hour | `/chat`, plus text to the Telegram bot |
+| **Telegram bot** | Two-way: send photos to log, send questions to chat, get nudges back | [@thalify_health_bot](https://t.me/thalify_health_bot) |
+| **Nudges** | Gentle one-liners after every meal — never wakes you up at 3 AM | In-app bell + Telegram |
+| **Lab report analysis** | Photo of bloodwork → specific Indian foods to move HbA1c, B12, iron, cholesterol | `/lab` |
+| **Family meal optimizer** | Per-user portion guidance from a shared family menu | `/family` |
+| **Pattern insights** | 28-day eating heatmap + weekly AI summary of what's working | `/patterns` |
+| **Founder offer** | First 50 paying customers → **lifetime access for ₹99 once** (3,000 AI actions / month forever). After 50, monthly tier. | `/upgrade` |
+
+We don't tell you to skip dinner. We don't tell you rice is the enemy. We don't pretend ghee is poison. We count katoris, not kale. And we speak the language you actually think in — all five of them.
 
 ---
 
@@ -32,6 +52,7 @@ Thalify is built for the way Indians actually eat — at the family table, with 
 | AI | Google Gemini Flash (`gemini-2.5-flash-lite`) — vision + chat, free 1500 req/day |
 | Email | Brevo transactional API (free 300/day) — waitlist welcome, signup welcome, password reset |
 | Telegram | Direct Bot API (free, no third-party) — webhook + inline keyboards |
+| Payments | **Razorpay Standard Checkout** — UPI / card / netbanking, INR; webhook-driven server confirmation |
 | Hosting | **Vercel** (frontend) + **Convex Cloud** (backend) |
 | CI/CD | `git push origin main` → Vercel auto-deploys in ~10 sec |
 
@@ -141,10 +162,30 @@ Local browser → dev Convex → isolated from prod. Sign in or create a fresh d
 │   │   └── handlers.ts              ← handleText (Health Buddy reply), handlePhoto
 │   │                                  (scan + present buttons), handleCallback (log/skip)
 │   │
-│   └── whatsapp/                    ← WhatsApp adapter — DORMANT, launching next month
-│       ├── adapter.ts               ← Twilio sandbox + Meta Cloud API support
-│       ├── optIn.ts                 ← 6-digit verification code flow
-│       └── webhook.ts               ← STOP keyword + signature verification
+│   ├── whatsapp/                    ← WhatsApp adapter — DORMANT, launching next month
+│   │   ├── adapter.ts               ← Twilio sandbox + Meta Cloud API support
+│   │   ├── optIn.ts                 ← 6-digit verification code flow
+│   │   └── webhook.ts               ← STOP keyword + signature verification
+│   │
+│   └── razorpay/                    ← Founder paywall (₹99 → lifetime, first 50)
+│       ├── adapter.ts               ← Razorpay REST wrapper: createOrder,
+│       │                              fetchPayment, refundPayment, HMAC-SHA256
+│       │                              webhook + checkout signature verification
+│       ├── orders.ts                ← createPaymentOrder action (frontend-callable)
+│       │                              + payments-table audit mutations
+│       ├── founder.ts               ← Atomic founder-slot reservation (1-50,
+│       │                              race-safe via Convex transactional mutation),
+│       │                              auto-refund for slot 51+, founder welcome email
+│       └── webhook.ts               ← /razorpay/webhook httpAction with signature
+│                                      verification + amount/currency validation +
+│                                      event router (payment.captured / failed /
+│                                      refunds)
+│
+├── convex/lib/quota.ts              ← Plan-based usage quota — single source of
+│                                      truth for "can this user do this action".
+│                                      Free tier: per-action monthly caps (5 scans,
+│                                      10 chats, 1 lab, 2 family, 1 pattern).
+│                                      Lifetime tier: 3,000 unified actions / month.
 │
 ├── src/                             ← Frontend (Vite + React)
 │   ├── main.tsx                     ← Runtime Convex URL resolver (prod vs dev)
@@ -202,7 +243,10 @@ Local browser → dev Convex → isolated from prod. Sign in or create a fresh d
 | `TELEGRAM_BOT_USERNAME` | Without `@` (e.g. `thalify_health_bot`) | prod (currently also dev) |
 | `TELEGRAM_WEBHOOK_SECRET` | Random string echoed in `X-Telegram-Bot-Api-Secret-Token` | prod (currently also dev) |
 | `NUDGES_ENABLED` | `true` to run the worker; flip to `false` for emergency pause | prod + dev |
-| `WHATSAPP_*` | Reserved for next-month launch | not set yet |
+| `RAZORPAY_KEY_ID` | Razorpay API key (live mode, `rzp_live_...`) | **prod only** — never set on dev |
+| `RAZORPAY_KEY_SECRET` | Razorpay API secret | **prod only** |
+| `RAZORPAY_WEBHOOK_SECRET` | 256-bit HMAC secret matching the webhook in Razorpay dashboard | **prod only** |
+| `WHATSAPP_*` | Reserved for future launch | not set yet |
 
 List all: `npx convex env list`. Specific: `npx convex env get KEY`.
 
@@ -303,6 +347,70 @@ The bot is **two-way**:
 
 ---
 
+## How the founder paywall works
+
+The first 50 paying customers get **lifetime access for ₹99 once** — no monthly bills, ever. After 50, we switch to a monthly subscription tier (TBD).
+
+```
+User clicks "Become Founder" on dashboard or hits a quota wall
+       ↓
+/upgrade page (live "X of 50 left" counter)
+       ↓
+Convex action createPaymentOrder ──► POST https://api.razorpay.com/v1/orders
+       ↓                                              ↓
+Server stores Order in `payments` table              razorpay_order_id returned
+(status: "created")                                   ↓
+       ↓                                       Razorpay Checkout JS overlay opens
+       ↓                                              ↓
+       ↓                                       User pays via UPI / card / netbanking
+       ↓                                              ↓
+       ↓                                       Razorpay captures payment automatically
+       ↓                                              ↓
+                              POST → https://coordinated-corgi-211.convex.site/razorpay/webhook
+                                              ↓
+                          1. Verify X-Razorpay-Signature (HMAC-SHA256, constant-time)
+                          2. Validate amount === 9900 paise (₹99) + currency === INR
+                          3. Atomic counter increment in `counters` table:
+                              - if count ≤ 50 → reserve slot, mark profile lifetime
+                              - if count > 50 → trigger Razorpay refund + apology email
+                          4. Send founder welcome email via Brevo (#N of 50)
+                                              ↓
+                          Profile flips to plan="lifetime", founderNumber=N
+                                              ↓
+                          Live useQuery on /upgrade page re-renders → "You're Founder #N"
+```
+
+### Live-mode safety (built in)
+
+Real money flows through this system, so:
+
+- **Webhook signature verification** on every inbound call (constant-time HMAC compare prevents timing attacks)
+- **Amount must be exactly 9900 paise (₹99)** — anything else gets auto-refunded
+- **Currency must be INR** — anything else gets auto-refunded
+- **Idempotent** — Razorpay retries failed webhook deliveries; re-tapping a stale "Pay" button or the same webhook landing twice can't double-credit founder slots (`razorpayPaymentId` is checked)
+- **Atomic founder counter** — Convex transactional mutations guarantee that even at 100 concurrent payments, only the first 50 webhook arrivals get founder slots
+- **Refund is automatic + immediate** — slot 51+ / amount mismatch / already-lifetime → instant Razorpay refund call + apology email via Brevo
+- **Audit trail** — every order + payment + webhook event lives in the `payments` table forever, even if profile is later deleted
+
+### Quota
+
+| Tier | Per-action limits / month |
+|---|---|
+| Free | 5 scans · 10 chats · 1 lab · 2 family · 1 pattern |
+| Lifetime (founder + future subscription) | 3,000 unified actions (any type counts as 1) |
+
+Limits reset every 30 days from first use. Quota check runs in the same transaction as the existing rate limiter, so there's no race between abuse-protection and paywall enforcement.
+
+`enforceUserQuota()` (`convex/lib/quota.ts`) is the single source of truth. Currently in **soft mode** — counts every action but doesn't block (`ENFORCE_QUOTA = false` constants in scan.ts, chat.ts, lab.ts, family.ts, patterns.ts). Flip to `true` once you're ready for the wall to actually block free users hitting limits.
+
+### Webhook URL (prod)
+
+`https://coordinated-corgi-211.convex.site/razorpay/webhook`
+
+Configured in Razorpay dashboard → Webhooks. Subscribed events: `payment.captured`, `payment.failed`, `refund.created`, `refund.processed`, `order.paid`.
+
+---
+
 ## Security
 
 - Every auth-required mutation/action calls `getAuthUserId(ctx)`
@@ -323,6 +431,10 @@ The bot is **two-way**:
 - **Brevo email not arriving?** Sender must be verified — check `https://app.brevo.com/senders`. Current sender is `siddharth.kiit1@gmail.com`. Brevo's logs at `https://app.brevo.com/statistics/events` show delivery outcome.
 - **Telegram bot silent?** Check the webhook health: `curl https://api.telegram.org/bot<TOKEN>/getWebhookInfo` — `pending_update_count` should be 0 and `last_error_message` should be absent.
 - **Preview deploy hits prod Convex?** Check `src/main.tsx:16` — the hostname check must exactly match `n-beta-flame.vercel.app` / `thalify.vercel.app` / etc.
+- **Razorpay webhook returning 401?** `RAZORPAY_WEBHOOK_SECRET` mismatch between Razorpay dashboard and Convex env. Re-generate the secret in dashboard, then `CONVEX_DEPLOYMENT=prod:coordinated-corgi-211 npx convex env set RAZORPAY_WEBHOOK_SECRET '...'`.
+- **Founder paid but didn't get lifetime?** `npx convex logs` will show `[razorpay]` lines for every webhook event + failure mode. Most common cause: payment.captured fired before user completed onboarding → `reserveFounderSlot` returned `no-profile` → auto-refund kicked in. The user got their money back.
+- **Razorpay refund not in customer's bank yet?** Indian bank refund processing takes 5-7 business days. Check `Refunds` in the Razorpay dashboard for status. Our `payments` table tracks our local view.
+- **Want to release a founder slot for testing?** `CONVEX_DEPLOYMENT=prod:coordinated-corgi-211 npx convex run admin:resetFounderSlot '{"userId":"users:..."}'` — admin command (TODO: build this when needed).
 
 ---
 
@@ -334,6 +446,11 @@ The bot is **two-way**:
 | Nudge engine (events → AI → in-app bell + Telegram delivery) | ✅ shipped |
 | Telegram two-way bot (chat + photo scan + inline buttons) | ✅ shipped |
 | GitHub → Vercel auto-deploy chain | ✅ shipped (2026-04-26) |
+| Founder paywall: ₹99 once → lifetime, first 50 customers (Razorpay) | ✅ shipped (2026-04-26) |
+| Quota enforcement (kill switch — flip `ENFORCE_QUOTA = true`) | 🟡 soft-mode — counts but doesn't block; flip when ready |
+| Subscription tier (₹99/mo via Razorpay Subscriptions for customer 51+) | ⏳ planned — Razorpay backend already has the primitives |
+| Telegram paywall (magic-link upgrade prompt when free user hits limit) | ⏳ planned — small follow-up to enforcement |
+| Account settings page (plan, usage meter, cancel) | ⏳ planned |
 | WhatsApp delivery (branded sender) | 🟡 next month — adapter is wired, awaiting Twilio Senders / Meta WABA setup |
 | Multi-user family profiles | ⏳ planned |
 | Multi-language UI (currently English; AI handles Hindi/Hinglish) | ⏳ planned |
