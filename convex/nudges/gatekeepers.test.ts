@@ -35,8 +35,8 @@ describe("passesBucketDedup", () => {
 });
 
 describe("isInQuietHours (IST)", () => {
-  it("returns true at 23:00 IST", () => {
-    expect(isInQuietHours(23)).toBe(true);
+  it("returns true at 00:00 IST", () => {
+    expect(isInQuietHours(0)).toBe(true);
   });
   it("returns true at 06:00 IST", () => {
     expect(isInQuietHours(6)).toBe(true);
@@ -44,8 +44,8 @@ describe("isInQuietHours (IST)", () => {
   it("returns false at 07:00 IST", () => {
     expect(isInQuietHours(7)).toBe(false);
   });
-  it("returns false at 22:00 IST", () => {
-    expect(isInQuietHours(22)).toBe(false);
+  it("returns false at 23:00 IST", () => {
+    expect(isInQuietHours(23)).toBe(false);
   });
 });
 

@@ -1,6 +1,6 @@
 const FREQ_CAP_PER_DAY = 5;
 const BUCKET_DEDUP_HOURS = 12;
-const QUIET_HOUR_START = 23;
+const QUIET_HOUR_START = 0;
 const QUIET_HOUR_END = 7;
 const STALE_HOURS = 4;
 
@@ -21,6 +21,9 @@ export function passesBucketDedup(
 }
 
 export function isInQuietHours(hourIST: number): boolean {
+  if (QUIET_HOUR_START < QUIET_HOUR_END) {
+    return hourIST >= QUIET_HOUR_START && hourIST < QUIET_HOUR_END;
+  }
   return hourIST >= QUIET_HOUR_START || hourIST < QUIET_HOUR_END;
 }
 
