@@ -3,20 +3,22 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../convex/_generated/api'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 const LINKS = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'scan', label: 'Scan Meal' },
-  { id: 'chat', label: 'Health Buddy' },
-  { id: 'family', label: 'Family Meal' },
-  { id: 'lab', label: 'Lab Reports' },
-  { id: 'patterns', label: 'Patterns' },
+  { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
+  { id: 'scan', label: 'Scan Meal', icon: '📷' },
+  { id: 'chat', label: 'Health Buddy', icon: '💬' },
+  { id: 'family', label: 'Family Meal', icon: '🍛' },
+  { id: 'lab', label: 'Lab Reports', icon: '🧪' },
+  { id: 'patterns', label: 'Patterns', icon: '📊' },
 ]
 
 export default function Navbar() {
   const navigate = useNavigate()
   const location = useLocation()
   const current = location.pathname.replace('/', '')
+  const isMobile = useIsMobile()
   const { signOut } = useAuthActions()
   const currentUser = useQuery(api.users.getCurrentUser)
   const profile = useQuery(api.users.getProfile)
@@ -114,6 +116,17 @@ export default function Navbar() {
                   </div>
                 )}
               </div>
+              {isMobile && LINKS.map(link => (
+                <div
+                  key={link.id}
+                  onClick={() => { setMenuOpen(false); navigate(`/${link.id}`) }}
+                  style={{ padding: '10px 16px', fontSize: 14, color: current === link.id ? 'var(--sage-700)' : 'var(--ink-2)', fontWeight: current === link.id ? 600 : 400, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, borderTop: '1px solid var(--border)' }}
+                >
+                  <span style={{ fontSize: 16 }}>{link.icon}</span>
+                  <span>{link.label}</span>
+                </div>
+              ))}
+              {!isMobile && (
               <div
                 onClick={() => { setMenuOpen(false); navigate('/dashboard') }}
                 style={{ padding: '10px 16px', fontSize: 13, color: 'var(--ink-2)', cursor: 'pointer', transition: 'background 0.1s' }}
@@ -122,6 +135,7 @@ export default function Navbar() {
               >
                 Dashboard
               </div>
+              )}
               {currentUser?.isAdmin && (
                 <div
                   onClick={() => { setMenuOpen(false); navigate('/admin') }}

@@ -4,6 +4,7 @@ import { useAction, useMutation, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import Navbar from '../components/Navbar'
 import type { Id } from '../../convex/_generated/dataModel'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 type MealType = 'breakfast' | 'lunch' | 'snack' | 'dinner'
 type ScanItem = { name: string; portion: string; cal: number; protein: number; carbs: number; fat: number }
@@ -19,6 +20,7 @@ function guessMealType(): MealType {
 
 export default function Scan() {
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl)
   const scanMeal = useAction(api.scan.scanMeal)
   const updateScanItems = useMutation(api.scanFeedback.updateScanItems)
@@ -215,7 +217,7 @@ export default function Scan() {
 
             <div style={{ background: 'var(--sand)', borderRadius: 16, overflow: 'hidden', marginBottom: 14 }}>
               {items.map((item, i) => (
-                <div key={i} style={{ padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)', display: 'grid', gridTemplateColumns: '1fr 100px 70px 30px', gap: 8, alignItems: 'center' }}>
+                <div key={i} style={{ padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)', display: 'grid', gridTemplateColumns: isMobile ? '1fr 64px 52px 24px' : '1fr 100px 70px 30px', gap: isMobile ? 6 : 8, alignItems: 'center' }}>
                   <input
                     type="text"
                     value={item.name}

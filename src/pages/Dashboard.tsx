@@ -4,6 +4,7 @@ import { api } from '../../convex/_generated/api'
 import Navbar from '../components/Navbar'
 import Progress from '../components/ui/Progress'
 import BodyStatsCard from '../components/BodyStatsCard'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 function todayDate() { return new Date().toISOString().split('T')[0] }
 
@@ -20,6 +21,7 @@ const MEAL_ICON: Record<string, string> = {
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
   const profile = useQuery(api.users.getProfile)
   const currentUser = useQuery(api.users.getCurrentUser)
   const todayLogs = useQuery(api.meals.getTodayLogs, { date: todayDate() })
@@ -45,7 +47,7 @@ export default function Dashboard() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
       <Navbar />
-      <div className="page" style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 28 }}>
+      <div className="page" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 300px', gap: isMobile ? 16 : 28 }}>
         <div>
           <div style={{ marginBottom: 6, color: 'var(--muted)', fontSize: 14 }}>
             {greeting()}{currentUser?.name ? `, ${currentUser.name.split(' ')[0]}` : ''}
@@ -81,7 +83,7 @@ export default function Dashboard() {
           </div>
 
           {/* Quick actions */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: 12, marginBottom: 24 }}>
             {[
               ['📷', 'Scan Meal', '/scan'],
               ['💬', 'Health Buddy', '/chat'],
