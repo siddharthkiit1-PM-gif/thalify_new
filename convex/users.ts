@@ -1,4 +1,4 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { calculateTDEE, calculateTarget } from "./lib/calorie";
@@ -12,6 +12,26 @@ export const getProfile = query({
       .query("profiles")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .unique();
+  },
+});
+
+// Internal-callable variant — used by the Telegram webhook (no auth context)
+export const getProfileForUser = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    return await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+  },
+});
+
+export const getUserByIdInternal = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const user = await ctx.db.get(userId);
+    if (!user) return null;
+    return { _id: user._id, name: user.name ?? null, email: user.email ?? null };
   },
 });
 

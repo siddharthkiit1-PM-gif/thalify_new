@@ -44,6 +44,7 @@ import type * as scanFeedback from "../scanFeedback.js";
 import type * as storage from "../storage.js";
 import type * as telegram_adapter from "../telegram/adapter.js";
 import type * as telegram_connect from "../telegram/connect.js";
+import type * as telegram_handlers from "../telegram/handlers.js";
 import type * as telegram_webhook from "../telegram/webhook.js";
 import type * as users from "../users.js";
 import type * as waitlist from "../waitlist.js";
@@ -94,6 +95,7 @@ declare const fullApi: ApiFromModules<{
   storage: typeof storage;
   "telegram/adapter": typeof telegram_adapter;
   "telegram/connect": typeof telegram_connect;
+  "telegram/handlers": typeof telegram_handlers;
   "telegram/webhook": typeof telegram_webhook;
   users: typeof users;
   waitlist: typeof waitlist;

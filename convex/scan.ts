@@ -1,10 +1,11 @@
-import { action, internalMutation } from "./_generated/server";
+import { action, internalAction, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
 import { generateFromImage, extractJson, classifyError, AiError } from "./ai/claude";
 import { checkRateLimit } from "./lib/rateLimit";
 import { isUnlimitedUser } from "./lib/tiers";
+import type { Id } from "./_generated/dataModel";
 
 const SCAN_SYSTEM = `You are a world-class nutrition expert specializing in Indian cuisine with deep knowledge of regional Indian dishes across all 28 states.
 
@@ -117,6 +118,102 @@ export const scanMeal = action({
     });
 
     return { scanResultId, items: cleaned, totalCal, totalProtein };
+  },
+});
+
+/**
+ * Internal-callable scan + auto-log used by the Telegram webhook.
+ * Same Gemini scan path, but takes userId explicitly and (optionally) logs
+ * the meal to the user's mealLogs in one go.
+ */
+export const scanMealAsUser = internalAction({
+  args: {
+    userId: v.id("users"),
+    imageBase64: v.string(),
+    mediaType: v.optional(v.union(
+      v.literal("image/jpeg"),
+      v.literal("image/png"),
+      v.literal("image/webp"),
+      v.literal("image/gif"),
+    )),
+    autoLogAsMealType: v.optional(v.union(
+      v.literal("breakfast"),
+      v.literal("lunch"),
+      v.literal("snack"),
+      v.literal("dinner"),
+    )),
+  },
+  handler: async (
+    ctx,
+    { userId, imageBase64, mediaType = "image/jpeg", autoLogAsMealType },
+  ): Promise<{
+    scanResultId: string;
+    mealLogId?: Id<"mealLogs">;
+    items: ScanItem[];
+    totalCal: number;
+    totalProtein: number;
+    mealType?: string;
+  }> => {
+    if (imageBase64.length < 100) throw new Error("Image data invalid — please retry.");
+    if (imageBase64.length > 10 * 1024 * 1024) throw new Error("Image too large — please use under 7MB.");
+
+    await ctx.runMutation(internal.scan.enforceScanRateLimit, { userId });
+
+    let items: ScanItem[];
+    try {
+      items = await scan(imageBase64, mediaType);
+    } catch (err) {
+      const first = classifyError(err);
+      if (first.code === "parse") {
+        items = await scan(imageBase64, mediaType);
+      } else {
+        throw new Error(first.userMessage, { cause: err });
+      }
+    }
+
+    const cleaned = items.filter(validateItem);
+    if (cleaned.length === 0) {
+      throw new Error("No food detected — try better lighting or a closer shot.");
+    }
+
+    const totalCal = cleaned.reduce((s, i) => s + i.cal, 0);
+    const totalProtein = cleaned.reduce((s, i) => s + i.protein, 0);
+
+    const scanResultId: string = await ctx.runMutation(internal.scan.saveScanResultInternal, {
+      userId,
+      items: cleaned,
+      rawItems: cleaned,
+      totalCal,
+      totalProtein,
+      confidence: 0.9,
+    });
+
+    let mealLogId: Id<"mealLogs"> | undefined;
+    if (autoLogAsMealType) {
+      mealLogId = await ctx.runMutation(internal.meals.logMealForUser, {
+        userId,
+        date: new Date().toISOString().split("T")[0],
+        mealType: autoLogAsMealType,
+        items: cleaned.map((i) => ({
+          name: i.name,
+          portion: i.portion,
+          cal: i.cal,
+          protein: i.protein,
+          carbs: i.carbs,
+          fat: i.fat,
+        })),
+        totalCal,
+      });
+    } else {
+      // Still emit the scan_completed event so the nudge engine fires
+      await ctx.runMutation(internal.nudges.queue.enqueue, {
+        userId,
+        type: "scan_completed",
+        payload: { totalCal, itemCount: cleaned.length },
+      });
+    }
+
+    return { scanResultId, mealLogId, items: cleaned, totalCal, totalProtein, mealType: autoLogAsMealType };
   },
 });
 

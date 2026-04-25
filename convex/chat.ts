@@ -1,4 +1,4 @@
-import { action, mutation, query, internalMutation } from "./_generated/server";
+import { action, mutation, query, internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api, internal } from "./_generated/api";
@@ -227,6 +227,132 @@ Now answer ${firstName}'s question using everything above.`;
     }
 
     await ctx.runMutation(api.chat.saveMessage, { from: "ai", text: aiText });
+    return aiText;
+  },
+});
+
+// ─── Internal-callable chat (used by Telegram webhook) ──────────────────
+
+export const getHistoryForUser = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    return await ctx.db
+      .query("chatMessages")
+      .withIndex("by_userId", q => q.eq("userId", userId))
+      .order("asc")
+      .take(100);
+  },
+});
+
+export const saveMessageForUser = internalMutation({
+  args: {
+    userId: v.id("users"),
+    from: v.union(v.literal("user"), v.literal("ai")),
+    text: v.string(),
+  },
+  handler: async (ctx, { userId, from, text }) => {
+    await ctx.db.insert("chatMessages", { userId, from, text, createdAt: Date.now() });
+  },
+});
+
+/**
+ * Identical AI behaviour to `chatWithCoach` but invoked with an explicit
+ * userId — used by the Telegram webhook where there's no auth context.
+ * Reads the same context (profile, today's meals, history) and shares the
+ * same system prompt.
+ */
+export const chatAsUser = internalAction({
+  args: { userId: v.id("users"), message: v.string() },
+  handler: async (ctx, { userId, message }): Promise<string> => {
+    const trimmed = message.trim();
+    if (trimmed.length === 0) throw new Error("Empty message");
+    if (trimmed.length > CHAT_MAX_MSG_LEN) {
+      throw new Error(`Message too long (max ${CHAT_MAX_MSG_LEN} characters).`);
+    }
+
+    await ctx.runMutation(internal.chat.enforceChatRateLimit, { userId });
+
+    type Profile = { goal?: string; dietType?: string; calorieGoal?: number; dislikes?: string[]; weightKg?: number; age?: number; activityLevel?: string };
+    type MealLog = { mealType: string; totalCal: number; items: { name: string; portion: string; protein: number }[] };
+    type ChatMsg = { from: string; text: string };
+    type UserDoc = { name: string | null };
+
+    const today = new Date().toISOString().split("T")[0];
+    const [profile, todayLogs, history, currentUser] = await Promise.all([
+      ctx.runQuery(internal.users.getProfileForUser, { userId }) as Promise<Profile | null>,
+      ctx.runQuery(internal.meals.getTodayLogsForUser, { userId, date: today }) as Promise<MealLog[]>,
+      ctx.runQuery(internal.chat.getHistoryForUser, { userId }) as Promise<ChatMsg[]>,
+      ctx.runQuery(internal.users.getUserByIdInternal, { userId }) as Promise<UserDoc | null>,
+    ]);
+
+    const fullName = currentUser?.name ?? "";
+    const firstName = fullName.trim().split(/\s+/)[0] || "there";
+    const totalCal = todayLogs.reduce((acc, l) => acc + l.totalCal, 0);
+    const totalProtein = todayLogs.reduce(
+      (acc, l) => acc + l.items.reduce((a, i) => a + (i.protein ?? 0), 0),
+      0,
+    );
+    const calorieGoal = profile?.calorieGoal ?? 1800;
+    const remaining = calorieGoal - totalCal;
+    const isOverBudget = remaining < 0;
+    const hasBreakfast = todayLogs.some((l) => l.mealType === "breakfast");
+    const hasLunch = todayLogs.some((l) => l.mealType === "lunch");
+    const hasDinner = todayLogs.some((l) => l.mealType === "dinner");
+    const mealSummary = todayLogs.length > 0
+      ? todayLogs.map((l) =>
+          `- ${l.mealType}: ${l.items.map((i) => `${i.name} (${i.portion}, ${Math.round(i.protein)}g protein)`).join(", ")} — ${l.totalCal} cal total`
+        ).join("\n")
+      : "(nothing logged yet today)";
+    const hour = getISTHour();
+    const timeCtx = getTimeContext(hour);
+    const mealStatus = [
+      hasBreakfast ? "breakfast ✓" : "no breakfast",
+      hasLunch ? "lunch ✓" : "no lunch",
+      hasDinner ? "dinner ✓" : "no dinner",
+    ].join(" · ");
+
+    const systemPrompt = `You are Health Buddy — ${firstName}'s personal nutrition coach for Indian food, replying over Telegram.
+
+━━━ ${firstName.toUpperCase()}'S CONTEXT ━━━
+Goal: ${profile?.goal ?? "maintain"} weight · Diet: ${profile?.dietType ?? "vegetarian"}
+Daily target: ${calorieGoal} cal · Dislikes: ${profile?.dislikes?.join(", ") || "none"}
+
+━━━ TODAY'S FOOD LOG ━━━
+Meals: ${mealStatus}
+${mealSummary}
+Totals: ${totalCal} / ${calorieGoal} cal · ${Math.round(totalProtein)}g protein
+Budget: ${isOverBudget ? `${Math.abs(remaining)} OVER` : `${remaining} remaining`}
+
+━━━ TIME ━━━
+${hour}:00 IST · ${timeCtx.period}
+${timeCtx.guidance}
+
+━━━ TELEGRAM RULES ━━━
+1. Reference what they actually ate — never invent meals. If log is empty, say so.
+2. Use ${firstName}'s name once, naturally, not at the start.
+3. NO fluff: "Great question!", "I understand", "As your coach", "It's important to...". Skip warm-up.
+4. Be SPECIFIC. "Eat more protein" is garbage. "Add 1 boiled egg + 1 katori curd" is good. Use Indian portion words: katori, roti, glass, plate, piece.
+5. 1-3 SENTENCES. Telegram messages are read at a glance. Longer only if explicitly asked.
+6. Match their language: Hindi/Hinglish in → reply in same.
+7. NEVER prescribe medication, diagnose, or comment on lab values. Defer to "check with your doctor".`;
+
+    await ctx.runMutation(internal.chat.saveMessageForUser, { userId, from: "user", text: trimmed });
+
+    const recent = history.slice(-20);
+    const messages: { role: "user" | "assistant"; content: string }[] = [];
+    for (const m of recent) {
+      messages.push({ role: m.from === "user" ? "user" : "assistant", content: m.text });
+    }
+    messages.push({ role: "user", content: trimmed });
+
+    let aiText: string;
+    try {
+      aiText = await generateText({ system: systemPrompt, messages, maxTokens: 600 });
+    } catch (err) {
+      throw new Error(classifyError(err).userMessage, { cause: err });
+    }
+
+    await ctx.runMutation(internal.chat.saveMessageForUser, { userId, from: "ai", text: aiText });
     return aiText;
   },
 });
