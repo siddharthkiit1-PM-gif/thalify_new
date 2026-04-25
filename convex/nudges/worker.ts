@@ -199,7 +199,35 @@ export const processSingleEvent = internalAction({
       },
     );
 
+    if (state.whatsappOptIn && state.whatsappNumber) {
+      const { sendText } = await import("../whatsapp/adapter");
+      const result = await sendText(state.whatsappNumber, written.message);
+      if (result.success) {
+        await ctx.runMutation(internal.nudges.worker.markWhatsappDelivered, {
+          notificationId,
+          messageId: result.messageId ?? "",
+        });
+      } else {
+        console.warn(
+          `whatsapp send failed for ${event.userId}: ${result.error}`,
+        );
+      }
+    }
+
     return notificationId;
+  },
+});
+
+export const markWhatsappDelivered = internalMutation({
+  args: {
+    notificationId: v.id("notifications"),
+    messageId: v.string(),
+  },
+  handler: async (ctx, { notificationId, messageId }) => {
+    await ctx.db.patch(notificationId, {
+      deliveredViaWhatsApp: true,
+      whatsappMessageId: messageId,
+    });
   },
 });
 
