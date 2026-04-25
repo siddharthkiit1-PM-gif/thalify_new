@@ -35,6 +35,8 @@ export default defineSchema({
     whatsappNumber: v.optional(v.string()),       // E.164: "+919876543210"
     whatsappOptIn: v.optional(v.boolean()),
     whatsappVerifiedAt: v.optional(v.number()),
+    whatsappPendingCode: v.optional(v.string()),
+    whatsappPendingCodeExpiresAt: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
 
   mealLogs: defineTable({

@@ -44,6 +44,9 @@ import type * as scanFeedback from "../scanFeedback.js";
 import type * as storage from "../storage.js";
 import type * as users from "../users.js";
 import type * as waitlist from "../waitlist.js";
+import type * as whatsapp_adapter from "../whatsapp/adapter.js";
+import type * as whatsapp_optIn from "../whatsapp/optIn.js";
+import type * as whatsapp_webhook from "../whatsapp/webhook.js";
 
 import type {
   ApiFromModules,
@@ -88,6 +91,9 @@ declare const fullApi: ApiFromModules<{
   storage: typeof storage;
   users: typeof users;
   waitlist: typeof waitlist;
+  "whatsapp/adapter": typeof whatsapp_adapter;
+  "whatsapp/optIn": typeof whatsapp_optIn;
+  "whatsapp/webhook": typeof whatsapp_webhook;
 }>;
 
 /**
