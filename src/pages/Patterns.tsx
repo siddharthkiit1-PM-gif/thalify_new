@@ -47,7 +47,7 @@ export default function Patterns() {
       <Navbar />
       <div className="page" style={{ maxWidth: 680, paddingTop: 32 }}>
         <div style={{ marginBottom: 28 }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10 }}>
+          <div data-eyebrow style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10 }}>
             Insight · Last 28 days
           </div>
           <h1 className="serif" style={{ fontSize: 36, marginBottom: 8, lineHeight: 1.1, letterSpacing: '-0.015em' }}>The shape of your eating.</h1>

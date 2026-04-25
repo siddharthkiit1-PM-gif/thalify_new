@@ -53,8 +53,8 @@ export default function Dashboard() {
       <Navbar />
       <div className="page" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 300px', gap: isMobile ? 16 : 28 }}>
         <div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10 }}>
-            {greeting()} · {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
+          <div data-eyebrow style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10 }}>
+            {greeting()} · {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
           </div>
           <h1 className="serif" style={{ fontSize: 36, marginBottom: 24, lineHeight: 1.1, letterSpacing: '-0.015em' }}>
             {currentUser?.name ? <>Hi {currentUser.name.split(' ')[0]}, here's where you stand.</> : <>Here's where you stand.</>}

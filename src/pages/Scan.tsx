@@ -134,7 +134,7 @@ export default function Scan() {
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
       <Navbar />
       <div className="page" style={{ maxWidth: 680 }}>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10 }}>
+        <div data-eyebrow style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10 }}>
           Scan · {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
         </div>
         <h1 className="serif" style={{ fontSize: 36, marginBottom: 6, lineHeight: 1.1, letterSpacing: '-0.015em' }}>Snap your plate.</h1>
@@ -145,6 +145,7 @@ export default function Scan() {
         {phase === 'upload' && (
           <>
             <div
+              className="scan-upload"
               onDrop={handleDrop}
               onDragOver={e => e.preventDefault()}
               style={{

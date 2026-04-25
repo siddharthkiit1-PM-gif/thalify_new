@@ -43,8 +43,8 @@ export default function Onboarding() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--cream)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ width: '100%', maxWidth: 520, padding: 40 }}>
+    <div style={{ minHeight: '100vh', background: 'var(--cream)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div className="onboarding-card" style={{ width: '100%', maxWidth: 520 }}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 36 }}>
           {Array.from({ length: STEPS }).map((_, i) => {
             const s = i + 1
@@ -54,7 +54,7 @@ export default function Onboarding() {
 
         {step === 1 && (
           <div className="fade-in">
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 14 }}>
+            <div data-eyebrow style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 14 }}>
               Step 1 of 3 · The goal
             </div>
             <h2 className="serif" style={{ fontSize: 36, marginBottom: 10, lineHeight: 1.15, letterSpacing: '-0.015em' }}>What are we working toward?</h2>
@@ -87,7 +87,7 @@ export default function Onboarding() {
 
         {step === 2 && (
           <div className="fade-in">
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 14 }}>
+            <div data-eyebrow style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 14 }}>
               Step 2 of 3 · The plate
             </div>
             <h2 className="serif" style={{ fontSize: 36, marginBottom: 10, lineHeight: 1.15, letterSpacing: '-0.015em' }}>What do you eat?</h2>
@@ -119,7 +119,7 @@ export default function Onboarding() {
 
         {step === 3 && (
           <div className="fade-in">
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 14 }}>
+            <div data-eyebrow style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 14 }}>
               Step 3 of 3 · The context
             </div>
             <h2 className="serif" style={{ fontSize: 36, marginBottom: 10, lineHeight: 1.15, letterSpacing: '-0.015em' }}>A bit about your kitchen.</h2>

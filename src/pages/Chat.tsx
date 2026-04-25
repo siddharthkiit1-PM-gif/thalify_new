@@ -56,7 +56,7 @@ export default function Chat() {
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           {/* Header */}
           <div style={{ padding: '20px 0 14px' }}>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>
+            <div data-eyebrow style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>
               Health Buddy · Always on
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>

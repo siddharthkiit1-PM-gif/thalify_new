@@ -405,25 +405,61 @@ input, textarea { font-family: inherit; color: inherit; }
 .tweaks .opt.active { background: var(--sage-700); color: #fff; border-color: var(--sage-700); }
 
 /* Mobile responsive */
+/* Auth + Onboarding card chrome — responsive padding so the card breathes
+   on small phones without losing presence on desktop. */
+.auth-card { padding: 40px; }
+.onboarding-card { padding: 32px 28px; }
+
+/* ── Tablet + phone (≤768px) ────────────────────────────── */
 @media (max-width: 768px) {
   .page {
-    padding: 16px;
+    padding: 18px 16px 64px;
     grid-template-columns: 1fr !important;
   }
   .landing-hero {
     grid-template-columns: 1fr !important;
     gap: 32px;
   }
-  .hero-preview {
-    display: none;
-  }
-  .nav-links {
-    display: none;
-  }
-  .nav-inner {
-    padding: 0 16px;
-  }
+  .hero-preview { display: none; }
+  .nav-links { display: none; }
+  .nav-inner { padding: 0 16px; }
+
+  /* Editorial headlines scale down so 36px desktop type doesn't dominate
+     a phone screen. !important needed because pages use inline fontSize:36
+     to sit alongside the eyebrow rhythm — that wins over a normal CSS rule. */
   h1 {
-    font-size: 36px !important;
+    font-size: 28px !important;
+    line-height: 1.18 !important;
+    letter-spacing: -0.012em !important;
   }
+  h2.serif {
+    font-size: 24px !important;
+    line-height: 1.22 !important;
+    letter-spacing: -0.01em !important;
+  }
+}
+
+/* ── Small phones (iPhone SE / mini / compact Android, ≤430px) ── */
+@media (max-width: 430px) {
+  h1 { font-size: 26px !important; }
+  h2.serif { font-size: 22px !important; }
+  .page { padding: 14px 14px 56px !important; }
+  .btn { height: 46px; padding: 0 18px; font-size: 14px; }
+  .input { height: 44px; font-size: 15px; }
+  /* Tighten editorial eyebrow letter-spacing so a longer line like
+     "GOOD MORNING · MONDAY 26 APRIL" doesn't overflow at 320px width */
+  [data-eyebrow] { letter-spacing: 0.12em !important; }
+  /* Card chrome shrinks so cards don't push to the screen edge */
+  .auth-card { padding: 26px 20px !important; border-radius: 16px; }
+  .onboarding-card { padding: 24px 18px !important; }
+  /* Scan upload zone — keep visual presence but lose extra padding */
+  .scan-upload { padding: 36px 20px !important; }
+}
+
+/* ── iPhone SE 1st-gen and similar (≤360px) ───────────────── */
+@media (max-width: 360px) {
+  h1 { font-size: 23px !important; line-height: 1.2 !important; }
+  h2.serif { font-size: 20px !important; }
+  .page { padding: 12px 12px 48px !important; }
+  .btn { padding: 0 14px; }
 }
