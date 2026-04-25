@@ -29,6 +29,7 @@ import type * as lib_tiers from "../lib/tiers.js";
 import type * as meals from "../meals.js";
 import type * as nudges_aiWriter from "../nudges/aiWriter.js";
 import type * as nudges_gatekeepers from "../nudges/gatekeepers.js";
+import type * as nudges_queries from "../nudges/queries.js";
 import type * as nudges_queue from "../nudges/queue.js";
 import type * as nudges_rules from "../nudges/rules.js";
 import type * as nudges_seed from "../nudges/seed.js";
@@ -72,6 +73,7 @@ declare const fullApi: ApiFromModules<{
   meals: typeof meals;
   "nudges/aiWriter": typeof nudges_aiWriter;
   "nudges/gatekeepers": typeof nudges_gatekeepers;
+  "nudges/queries": typeof nudges_queries;
   "nudges/queue": typeof nudges_queue;
   "nudges/rules": typeof nudges_rules;
   "nudges/seed": typeof nudges_seed;
