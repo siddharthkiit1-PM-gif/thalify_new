@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as __fixtures___nudges from "../__fixtures__/nudges.js";
 import type * as accountEmails from "../accountEmails.js";
 import type * as admin from "../admin.js";
 import type * as adminScans from "../adminScans.js";
@@ -25,6 +26,12 @@ import type * as lib_rateLimit from "../lib/rateLimit.js";
 import type * as lib_security from "../lib/security.js";
 import type * as lib_tiers from "../lib/tiers.js";
 import type * as meals from "../meals.js";
+import type * as nudges_aiWriter from "../nudges/aiWriter.js";
+import type * as nudges_gatekeepers from "../nudges/gatekeepers.js";
+import type * as nudges_queue from "../nudges/queue.js";
+import type * as nudges_rules from "../nudges/rules.js";
+import type * as nudges_signal from "../nudges/signal.js";
+import type * as nudges_templatePicker from "../nudges/templatePicker.js";
 import type * as passwordReset from "../passwordReset.js";
 import type * as patterns from "../patterns.js";
 import type * as scan from "../scan.js";
@@ -40,6 +47,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "__fixtures__/nudges": typeof __fixtures___nudges;
   accountEmails: typeof accountEmails;
   admin: typeof admin;
   adminScans: typeof adminScans;
@@ -57,6 +65,12 @@ declare const fullApi: ApiFromModules<{
   "lib/security": typeof lib_security;
   "lib/tiers": typeof lib_tiers;
   meals: typeof meals;
+  "nudges/aiWriter": typeof nudges_aiWriter;
+  "nudges/gatekeepers": typeof nudges_gatekeepers;
+  "nudges/queue": typeof nudges_queue;
+  "nudges/rules": typeof nudges_rules;
+  "nudges/signal": typeof nudges_signal;
+  "nudges/templatePicker": typeof nudges_templatePicker;
   passwordReset: typeof passwordReset;
   patterns: typeof patterns;
   scan: typeof scan;
