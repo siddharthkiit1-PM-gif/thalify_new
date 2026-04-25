@@ -4,6 +4,7 @@ import { api } from '../../convex/_generated/api'
 import Navbar from '../components/Navbar'
 import Progress from '../components/ui/Progress'
 import BodyStatsCard from '../components/BodyStatsCard'
+import NotificationBanner from '../components/NotificationBanner'
 import { useIsMobile } from '../hooks/useIsMobile'
 
 function todayDate() { return new Date().toISOString().split('T')[0] }
@@ -53,6 +54,8 @@ export default function Dashboard() {
             {greeting()}{currentUser?.name ? `, ${currentUser.name.split(' ')[0]}` : ''}
           </div>
           <h1 className="serif" style={{ fontSize: 32, marginBottom: 24 }}>Today's Overview</h1>
+
+          <NotificationBanner />
 
           <BodyStatsCard profile={profile as never} />
 
