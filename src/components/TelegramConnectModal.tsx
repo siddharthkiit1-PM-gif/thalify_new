@@ -1,37 +1,39 @@
 import { useEffect, useState } from 'react'
 import { useAction, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
+import TelegramLogo from './TelegramLogo'
 
 interface Props {
   open: boolean
   onClose: () => void
 }
 
+type Phase = 'loading' | 'ready' | 'waiting' | 'connected' | 'error'
+
 export default function TelegramConnectModal({ open, onClose }: Props) {
   const generateLink = useAction(api.telegram.connect.generateConnectLink)
   const profile = useQuery(api.users.getProfile)
   const [link, setLink] = useState<string | null>(null)
   const [error, setError] = useState('')
-  const [submitting, setSubmitting] = useState(false)
+  const [linkOpened, setLinkOpened] = useState(false)
 
   // Generate the deep link the moment the modal opens
   useEffect(() => {
     if (!open) {
       setLink(null)
       setError('')
+      setLinkOpened(false)
       return
     }
-    setSubmitting(true)
     generateLink()
       .then(({ url }) => setLink(url))
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to create link'))
-      .finally(() => setSubmitting(false))
   }, [open, generateLink])
 
   // Auto-close once profile flips to connected
   useEffect(() => {
     if (open && profile?.telegramOptIn) {
-      const t = setTimeout(onClose, 1500)
+      const t = setTimeout(onClose, 2400)
       return () => clearTimeout(t)
     }
   }, [open, profile?.telegramOptIn, onClose])
@@ -39,109 +41,119 @@ export default function TelegramConnectModal({ open, onClose }: Props) {
   if (!open) return null
 
   const connected = profile?.telegramOptIn === true
+  const phase: Phase = error
+    ? 'error'
+    : connected
+    ? 'connected'
+    : !link
+    ? 'loading'
+    : linkOpened
+    ? 'waiting'
+    : 'ready'
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.4)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 200,
-        padding: 16,
-      }}
-    >
-      <div
-        style={{
-          background: 'white',
-          borderRadius: 16,
-          padding: 28,
-          maxWidth: 420,
-          width: '100%',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 16,
-          }}
-        >
-          <h3 style={{ margin: 0, fontFamily: 'Georgia, serif', fontSize: 20 }}>
-            Get nudges on Telegram
-          </h3>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: 20,
-              cursor: 'pointer',
-              color: 'var(--muted)',
-            }}
-          >
-            ×
-          </button>
+    <div className="tg-modal-backdrop" onClick={onClose}>
+      <div className="tg-modal" onClick={e => e.stopPropagation()} style={{ position: 'relative' }}>
+        <button className="tg-modal-close" onClick={onClose} aria-label="Close">×</button>
+
+        <div className="tg-modal-hero">
+          <div className="tg-modal-pedestal">
+            <span className="tg-bob">
+              <TelegramLogo size={56} />
+            </span>
+          </div>
+
+          {phase === 'connected' ? (
+            <>
+              <div className="tg-eyebrow">All set</div>
+              <h2 className="tg-headline">You&rsquo;re in.</h2>
+              <p className="tg-sub">Nudges will arrive in your Telegram chat — no need to keep this open.</p>
+            </>
+          ) : (
+            <>
+              <div className="tg-eyebrow">Integration · Telegram</div>
+              <h2 className="tg-headline">Two taps. One conversation.</h2>
+              <p className="tg-sub">Connect once and every meal you log gets a personalized nudge in Telegram.</p>
+            </>
+          )}
         </div>
 
-        {connected ? (
+        {phase === 'connected' && (
           <>
-            <div style={{ fontSize: 32, marginBottom: 8, textAlign: 'center' }}>✓</div>
-            <p style={{ fontSize: 14, textAlign: 'center', marginBottom: 8 }}>
-              Connected. Nudges will arrive in your Telegram chat.
+            <div className="tg-success-mark">✓</div>
+            <div className="tg-bot-bubble">
+              Connected to Thalify ✓ You&rsquo;ll get nudges here based on your meals.
+            </div>
+          </>
+        )}
+
+        {phase === 'loading' && (
+          <div className="tg-waiting">
+            <span>Generating your link</span>
+            <span className="tg-dots"><span /><span /><span /></span>
+          </div>
+        )}
+
+        {phase === 'waiting' && (
+          <>
+            <div className="tg-waiting">
+              <span>Waiting for you to tap <b>Start</b> in Telegram</span>
+              <span className="tg-dots"><span /><span /><span /></span>
+            </div>
+            <a
+              href={link!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-tg btn-lg"
+              style={{ width: '100%', marginBottom: 6 }}
+              onClick={() => setLinkOpened(true)}
+            >
+              <TelegramLogo size={18} /> Open Telegram again
+            </a>
+            <p className="tg-trust">
+              This auto-completes the moment you tap Start in the bot chat.
             </p>
           </>
-        ) : (
+        )}
+
+        {phase === 'ready' && (
           <>
-            <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16, lineHeight: 1.5 }}>
-              One tap to connect. We'll open Telegram — just press <strong>Start</strong> and you're set. No phone number, no codes.
+            <div className="tg-bullets">
+              <div className="tg-bullet">
+                <span className="tg-bullet-icon">🪶</span>
+                <span><b>No phone number.</b> Just your Telegram username.</span>
+              </div>
+              <div className="tg-bullet">
+                <span className="tg-bullet-icon">⚡</span>
+                <span><b>Instant.</b> Personalized nudge after every meal you log.</span>
+              </div>
+              <div className="tg-bullet">
+                <span className="tg-bullet-icon">🌿</span>
+                <span><b>Pause anytime.</b> Reply STOP in the bot chat.</span>
+              </div>
+            </div>
+
+            <a
+              href={link!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-tg btn-lg"
+              style={{ width: '100%' }}
+              onClick={() => setLinkOpened(true)}
+            >
+              <TelegramLogo size={18} /> Connect with Telegram
+            </a>
+
+            <p className="tg-trust">
+              Free forever &middot; <a href="https://telegram.org/apps" target="_blank" rel="noopener noreferrer">Don&rsquo;t have Telegram?</a>
             </p>
-
-            {submitting && (
-              <div style={{ fontSize: 13, color: 'var(--muted)', textAlign: 'center', padding: 12 }}>
-                Generating link…
-              </div>
-            )}
-
-            {error && (
-              <div style={{ color: '#b91c1c', fontSize: 13, marginBottom: 12 }}>
-                {error}
-              </div>
-            )}
-
-            {link && (
-              <>
-                <a
-                  href={link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-primary"
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    textAlign: 'center',
-                    textDecoration: 'none',
-                    marginBottom: 12,
-                  }}
-                >
-                  Open Telegram
-                </a>
-                <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, textAlign: 'center' }}>
-                  Don't have Telegram? Install from{' '}
-                  <a href="https://telegram.org/apps" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--sage-700)' }}>
-                    telegram.org/apps
-                  </a>
-                  .
-                </p>
-                <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 12 }}>
-                  Reply <strong>STOP</strong> in the bot chat anytime to unsubscribe.
-                </p>
-              </>
-            )}
           </>
+        )}
+
+        {phase === 'error' && (
+          <div style={{ color: 'var(--red)', fontSize: 13, padding: '14px 16px', background: 'var(--red-bg)', border: '1px solid var(--red-br)', borderRadius: 10, marginTop: 14 }}>
+            {error}
+          </div>
         )}
       </div>
     </div>

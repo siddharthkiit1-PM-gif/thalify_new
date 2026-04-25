@@ -27,6 +27,15 @@
   --amber-bg:#FDF6E6;
   --wa-green:#25D366;
 
+  /* Telegram brand — used wherever the Telegram integration appears.
+     Keeps the cool blue confined to the integration surface so the rest
+     of the warm-science palette doesn't fight it. */
+  --tg-blue:        #22A6DC;
+  --tg-blue-light:  #41BCE7;
+  --tg-blue-dark:   #1A8BB8;
+  --tg-blue-tint:   rgba(34, 166, 220, 0.10);
+  --tg-blue-glow:   0 6px 20px rgba(34, 166, 220, 0.28);
+
   --shadow-card: 0 4px 12px rgba(26, 25, 23, 0.08);
   --shadow-modal: 0 8px 24px rgba(26, 25, 23, 0.12);
   --glow: 0 0 20px rgba(51, 201, 122, 0.20);
@@ -479,4 +488,272 @@ input, textarea { font-family: inherit; color: inherit; }
   h2.serif { font-size: 20px !important; }
   .page { padding: 12px 12px 48px !important; }
   .btn { padding: 0 14px; }
+}
+
+/* ───────────────────────────────────────────────────────────
+   Telegram integration components
+   ─────────────────────────────────────────────────────────── */
+
+/* Paper-plane bob: subtle 3-second drift, used on the modal hero logo
+   so the surface feels alive but not jittery. */
+@keyframes tg-bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-4px) rotate(2.5deg); }
+}
+.tg-bob { animation: tg-bob 3.4s ease-in-out infinite; transform-origin: center; }
+
+/* The dashboard "Connect Telegram" card — sand chrome + a thin sage
+   left-rail accent so it reads as one of OUR cards, but the logo and
+   button carry Telegram brand colour so the integration is unmistakable. */
+.tg-card {
+  position: relative;
+  background: linear-gradient(135deg, var(--sand) 0%, #FAF6EE 100%);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px 20px 18px 22px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.tg-card::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--sage-700) 0%, var(--tg-blue) 100%);
+}
+.tg-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--tg-blue-glow);
+  border-color: rgba(34, 166, 220, 0.30);
+}
+.tg-card-logo {
+  flex-shrink: 0;
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  background: var(--tg-blue-tint);
+  border-radius: 10px;
+  padding: 4px;
+}
+.tg-card-body { flex: 1; min-width: 0; }
+.tg-card-title {
+  font-family: var(--serif);
+  font-size: 17px;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  margin: 0 0 2px;
+  line-height: 1.2;
+}
+.tg-card-sub {
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+
+/* Telegram brand-blue button — used on the dashboard card and inside
+   the modal as the primary connect action. */
+.btn-tg {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px;
+  height: 38px; padding: 0 16px;
+  background: linear-gradient(180deg, var(--tg-blue-light) 0%, var(--tg-blue) 100%);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font: 600 13px/1 var(--sans);
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 10px rgba(34,166,220,0.22);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+.btn-tg:hover { filter: brightness(1.05); box-shadow: var(--tg-blue-glow); }
+.btn-tg:active { transform: scale(0.98); }
+.btn-tg.btn-lg { height: 50px; padding: 0 20px; font-size: 15px; border-radius: 12px; }
+
+/* Modal — soft cream backdrop instead of plain dark; hero logo gets a
+   centered pedestal with the Telegram-blue tint behind it. */
+.tg-modal-backdrop {
+  position: fixed; inset: 0;
+  background: radial-gradient(ellipse at center, rgba(34,166,220,0.18) 0%, rgba(0,0,0,0.45) 60%);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200;
+  padding: 16px;
+  animation: tg-fade-in 0.2s ease;
+}
+@keyframes tg-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.tg-modal {
+  background: #fff;
+  border-radius: 20px;
+  padding: 36px 30px 28px;
+  max-width: 420px; width: 100%;
+  box-shadow: var(--shadow-modal);
+  animation: tg-slide-up 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes tg-slide-up {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.tg-modal-hero {
+  text-align: center;
+  padding-bottom: 18px;
+}
+.tg-modal-pedestal {
+  display: inline-grid; place-items: center;
+  width: 96px; height: 96px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(65,188,231,0.10) 0%, rgba(34,166,220,0.16) 100%);
+  margin-bottom: 18px;
+  position: relative;
+}
+.tg-modal-pedestal::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 32px;
+  background: radial-gradient(circle, rgba(34,166,220,0.20) 0%, transparent 70%);
+  z-index: -1;
+}
+
+.tg-eyebrow {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+  color: var(--tg-blue-dark);
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.tg-headline {
+  font-family: var(--serif);
+  font-size: 26px;
+  line-height: 1.15;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+.tg-sub {
+  font-size: 14px;
+  color: var(--ink-2);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.tg-bullets {
+  display: flex; flex-direction: column; gap: 10px;
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin: 18px 0 20px;
+}
+.tg-bullet {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 13px; line-height: 1.5; color: var(--ink-2);
+}
+.tg-bullet b { color: var(--ink); font-weight: 600; }
+.tg-bullet-icon {
+  flex-shrink: 0;
+  width: 22px; height: 22px;
+  display: grid; place-items: center;
+  background: var(--tg-blue-tint);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.tg-trust {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 10px;
+  line-height: 1.6;
+}
+.tg-trust a { color: var(--tg-blue-dark); text-decoration: none; font-weight: 600; }
+.tg-trust a:hover { text-decoration: underline; }
+
+/* Waiting state — three pulsing dots in Telegram blue */
+.tg-waiting {
+  display: flex; align-items: center; justify-content: center;
+  gap: 14px;
+  padding: 22px 0;
+  color: var(--ink-2);
+  font-size: 13.5px;
+}
+.tg-dots { display: inline-flex; gap: 5px; }
+.tg-dots span {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--tg-blue);
+  animation: tg-pulse 1.2s ease-in-out infinite;
+}
+.tg-dots span:nth-child(2) { animation-delay: 0.2s; }
+.tg-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes tg-pulse {
+  0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* Connected state — checkmark draw + bot reply mock */
+.tg-success-mark {
+  width: 64px; height: 64px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--sage-500) 0%, var(--sage-700) 100%);
+  display: grid; place-items: center;
+  color: #fff;
+  font-size: 30px; font-weight: 700;
+  box-shadow: 0 6px 18px rgba(45, 95, 58, 0.32);
+  animation: tg-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes tg-pop {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.tg-bot-bubble {
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: 14px 14px 14px 4px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  max-width: 280px;
+  margin: 14px auto 0;
+  text-align: left;
+  position: relative;
+}
+.tg-bot-bubble::before {
+  content: "@thalify_health_bot";
+  display: block;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--tg-blue-dark);
+  font-weight: 700;
+  margin-bottom: 4px;
+  letter-spacing: 0.05em;
+}
+
+.tg-modal-close {
+  position: absolute; top: 16px; right: 16px;
+  background: none; border: none;
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  font-size: 18px; line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.tg-modal-close:hover { background: var(--sand); color: var(--ink); }
+
+/* Mobile fine-tuning for the modal */
+@media (max-width: 440px) {
+  .tg-modal { padding: 28px 20px 22px; border-radius: 16px; }
+  .tg-modal-pedestal { width: 80px; height: 80px; border-radius: 20px; margin-bottom: 14px; }
+  .tg-headline { font-size: 22px; }
+  .tg-bullets { padding: 12px 14px; }
 }

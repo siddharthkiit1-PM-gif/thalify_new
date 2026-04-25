@@ -7,6 +7,7 @@ import Progress from '../components/ui/Progress'
 import BodyStatsCard from '../components/BodyStatsCard'
 import NotificationBanner from '../components/NotificationBanner'
 import TelegramConnectModal from '../components/TelegramConnectModal'
+import TelegramLogo from '../components/TelegramLogo'
 import { useIsMobile } from '../hooks/useIsMobile'
 
 function todayDate() { return new Date().toISOString().split('T')[0] }
@@ -63,14 +64,17 @@ export default function Dashboard() {
           <NotificationBanner />
 
           {profile && !profile.telegramOptIn && (
-            <div style={{ background: 'var(--sand)', borderRadius: 12, padding: 14, marginBottom: 16 }}>
-              <div style={{ fontSize: 13, marginBottom: 6 }}>✈️ Get nudges on Telegram</div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
-                One tap. No phone number. Free, forever.
+            <div className="tg-card">
+              <div className="tg-card-logo">
+                <TelegramLogo size={28} />
               </div>
-              <button className="btn btn-secondary btn-sm" onClick={() => setTgOpen(true)}>
-                Connect Telegram
-              </button>
+              <div className="tg-card-body">
+                <h3 className="tg-card-title">Get gentle nudges in Telegram</h3>
+                <p className="tg-card-sub">One tap. No phone number, no codes. Free forever.</p>
+                <button className="btn-tg" onClick={() => setTgOpen(true)}>
+                  <TelegramLogo size={14} /> Connect with Telegram
+                </button>
+              </div>
             </div>
           )}
           <TelegramConnectModal open={tgOpen} onClose={() => setTgOpen(false)} />
