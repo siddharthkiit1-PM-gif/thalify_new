@@ -5,11 +5,15 @@ import { api, internal } from "./_generated/api";
 import { generateText, extractJson, classifyError } from "./ai/claude";
 import { matchDish } from "./data/foodMatcher";
 import { checkRateLimit } from "./lib/rateLimit";
+import { enforceUserQuota } from "./lib/quota";
+
+const ENFORCE_QUOTA = false;
 
 export const enforceFamilyRateLimit = internalMutation({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
     await checkRateLimit(ctx, userId, "family");
+    await enforceUserQuota(ctx, userId, "family", { enforce: ENFORCE_QUOTA });
   },
 });
 

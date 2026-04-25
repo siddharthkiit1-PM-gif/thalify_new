@@ -44,8 +44,38 @@ export default defineSchema({
     telegramConnectExpiresAt: v.optional(v.number()),
     // Optional running thread the AI uses for short-context replies on Telegram
     telegramLastInteractionAt: v.optional(v.number()),
+
+    // ── Plan + paywall ──────────────────────────────────────
+    // "free"     → free tier with monthly per-action limits
+    // "lifetime" → unlimited within 3000 actions/month, never billed again
+    // (subscription model coming later as "monthly")
+    plan: v.optional(v.union(v.literal("free"), v.literal("lifetime"))),
+    // Why this user has lifetime: "founder" (1-50, paid ₹99), "beta"
+    // (admin-comp'd, doesn't count toward 50), reserved for future tags
+    lifetimeReason: v.optional(v.union(
+      v.literal("founder"),
+      v.literal("beta"),
+      v.literal("waitlist"),
+    )),
+    // 1-50 for paying founders. Null for everyone else.
+    founderNumber: v.optional(v.number()),
+    paidAt: v.optional(v.number()),
+    razorpayOrderId: v.optional(v.string()),
+    razorpayPaymentId: v.optional(v.string()),
+    // Per-type free-tier counters (separate so we can show "3 of 5 scans
+    // used" etc. clearly). Premium uses tokensUsedThisMonth instead.
+    freeScansUsedThisMonth: v.optional(v.number()),
+    freeChatsUsedThisMonth: v.optional(v.number()),
+    freeLabsUsedThisMonth: v.optional(v.number()),
+    freeFamilyUsedThisMonth: v.optional(v.number()),
+    freePatternsUsedThisMonth: v.optional(v.number()),
+    // Premium unified bucket
+    tokensUsedThisMonth: v.optional(v.number()),
+    // Shared reset timestamp — first action after this resets all counters
+    usageResetAt: v.optional(v.number()),
   }).index("by_userId", ["userId"])
-    .index("by_telegramChatId", ["telegramChatId"]),
+    .index("by_telegramChatId", ["telegramChatId"])
+    .index("by_founderNumber", ["founderNumber"]),
 
   mealLogs: defineTable({
     userId: v.id("users"),
@@ -147,6 +177,37 @@ export default defineSchema({
     events: v.array(v.number()),
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
+
+  // Single-row counters (atomic). e.g. key="founders_paid" tracks how many
+  // of the 50 founder slots are filled. Read+increment in one mutation.
+  counters: defineTable({
+    key: v.string(),
+    value: v.number(),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
+  // Razorpay payments audit log — every order created + every webhook event
+  // we processed. Source of truth for who paid + which founder number they
+  // got. Survives even if profile is deleted (referential audit).
+  payments: defineTable({
+    userId: v.id("users"),
+    razorpayOrderId: v.string(),
+    razorpayPaymentId: v.optional(v.string()),
+    amount: v.number(), // in paise — 9900 = ₹99
+    currency: v.string(),
+    status: v.union(
+      v.literal("created"),
+      v.literal("captured"),
+      v.literal("failed"),
+      v.literal("refunded"),
+    ),
+    founderNumberAssigned: v.optional(v.number()),
+    notes: v.optional(v.any()),
+    createdAt: v.number(),
+    capturedAt: v.optional(v.number()),
+    failureReason: v.optional(v.string()),
+  }).index("by_userId", ["userId"])
+    .index("by_orderId", ["razorpayOrderId"]),
 
   // ─── Nudge engine (events queue, template library, output notifications) ───
   nudgeEvents: defineTable({

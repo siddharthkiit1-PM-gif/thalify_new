@@ -4,11 +4,15 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
 import { generateFromImage, extractJson, classifyError } from "./ai/claude";
 import { checkRateLimit } from "./lib/rateLimit";
+import { enforceUserQuota } from "./lib/quota";
+
+const ENFORCE_QUOTA = false;
 
 export const enforceLabRateLimit = internalMutation({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
     await checkRateLimit(ctx, userId, "lab");
+    await enforceUserQuota(ctx, userId, "lab", { enforce: ENFORCE_QUOTA });
   },
 });
 

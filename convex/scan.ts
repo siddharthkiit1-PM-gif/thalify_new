@@ -5,7 +5,12 @@ import { internal } from "./_generated/api";
 import { generateFromImage, extractJson, classifyError, AiError } from "./ai/claude";
 import { checkRateLimit } from "./lib/rateLimit";
 import { isUnlimitedUser } from "./lib/tiers";
+import { enforceUserQuota } from "./lib/quota";
 import type { Id } from "./_generated/dataModel";
+
+// Quota tracking — soft mode currently (counts but doesn't block).
+// Will be flipped to enforce: true once the paywall ships.
+const ENFORCE_QUOTA = false;
 
 const SCAN_SYSTEM = `You are a world-class nutrition expert specializing in Indian cuisine with deep knowledge of regional Indian dishes across all 28 states.
 
@@ -223,6 +228,8 @@ export const enforceScanRateLimit = internalMutation({
     const user = await ctx.db.get(userId);
     const limitKey = isUnlimitedUser(user?.email ?? null) ? "scan" : "scan_free";
     await checkRateLimit(ctx, userId, limitKey);
+    // Plan-based quota: counts now, blocks once ENFORCE_QUOTA is flipped on
+    await enforceUserQuota(ctx, userId, "scan", { enforce: ENFORCE_QUOTA });
   },
 });
 

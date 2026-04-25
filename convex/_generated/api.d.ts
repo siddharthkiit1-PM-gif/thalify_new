@@ -23,6 +23,7 @@ import type * as family from "../family.js";
 import type * as http from "../http.js";
 import type * as lab from "../lab.js";
 import type * as lib_calorie from "../lib/calorie.js";
+import type * as lib_quota from "../lib/quota.js";
 import type * as lib_rateLimit from "../lib/rateLimit.js";
 import type * as lib_security from "../lib/security.js";
 import type * as lib_tiers from "../lib/tiers.js";
@@ -74,6 +75,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   lab: typeof lab;
   "lib/calorie": typeof lib_calorie;
+  "lib/quota": typeof lib_quota;
   "lib/rateLimit": typeof lib_rateLimit;
   "lib/security": typeof lib_security;
   "lib/tiers": typeof lib_tiers;

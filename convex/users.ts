@@ -35,6 +35,54 @@ export const getUserByIdInternal = internalQuery({
   },
 });
 
+/**
+ * Frontend query for the account / upgrade page — shows current plan, founder
+ * number (if applicable), this month's usage, and how much is left.
+ */
+export const getMyQuotaStatus = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+    if (!profile) return null;
+    return {
+      plan: profile.plan ?? "free",
+      lifetimeReason: profile.lifetimeReason ?? null,
+      founderNumber: profile.founderNumber ?? null,
+      paidAt: profile.paidAt ?? null,
+      resetsAt: profile.usageResetAt ?? null,
+      usage: {
+        scan: profile.freeScansUsedThisMonth ?? 0,
+        chat: profile.freeChatsUsedThisMonth ?? 0,
+        lab: profile.freeLabsUsedThisMonth ?? 0,
+        family: profile.freeFamilyUsedThisMonth ?? 0,
+        pattern: profile.freePatternsUsedThisMonth ?? 0,
+      },
+      lifetimeTokensUsed: profile.tokensUsedThisMonth ?? 0,
+    };
+  },
+});
+
+/**
+ * How many of the 50 founder slots are filled. Public — drives the
+ * "X of 50 spots left" urgency on the upgrade page.
+ */
+export const getFounderSlotsRemaining = query({
+  args: {},
+  handler: async (ctx) => {
+    const counter = await ctx.db
+      .query("counters")
+      .withIndex("by_key", (q) => q.eq("key", "founders_paid"))
+      .unique();
+    const filled = counter?.value ?? 0;
+    return { filled, total: 50, remaining: Math.max(0, 50 - filled) };
+  },
+});
+
 const ADMIN_EMAILS = new Set([
   "siddharth.kiit1@gmail.com",
   "agrawalsiddharth18@gmail.com",
