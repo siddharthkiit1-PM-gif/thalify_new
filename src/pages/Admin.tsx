@@ -3,11 +3,13 @@ import { useQuery } from 'convex/react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../convex/_generated/api'
 import Navbar from '../components/Navbar'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 type ScanItem = { name: string; portion: string; cal: number; protein: number; carbs: number; fat: number }
 
 export default function Admin() {
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
   const currentUser = useQuery(api.users.getCurrentUser)
   const [filter, setFilter] = useState<'all' | 'edited' | 'inaccurate'>('all')
 
@@ -41,7 +43,7 @@ export default function Admin() {
         <p style={{ color: 'var(--muted)', marginBottom: 20 }}>Review scans, spot systematic errors, feed insights back into the prompt.</p>
 
         {stats && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, marginBottom: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(6, 1fr)', gap: 12, marginBottom: 24 }}>
             <StatCard label="Total scans" value={stats.total} />
             <StatCard label="Edited" value={`${stats.edited} (${Math.round(stats.editRate * 100)}%)`} />
             <StatCard label="👍 Accurate" value={stats.accurate} />
@@ -97,34 +99,35 @@ type ScanSummary = {
 
 function ScanRow({ scan }: { scan: ScanSummary }) {
   const [open, setOpen] = useState(false)
+  const isMobile = useIsMobile()
   const feedbackEmoji = scan.userFeedback === 'accurate' ? '👍' : scan.userFeedback === 'inaccurate' ? '👎' : scan.userFeedback === 'partial' ? '🤔' : ''
   const date = new Date(scan.createdAt)
 
   return (
     <div style={{ background: 'var(--sand)', borderRadius: 12, marginBottom: 10, overflow: 'hidden', border: scan.edited ? '2px solid var(--sage-700)' : '1px solid var(--border)' }}>
-      <div onClick={() => setOpen(!open)} style={{ padding: '12px 16px', cursor: 'pointer', display: 'grid', gridTemplateColumns: '60px 1fr auto auto auto', gap: 16, alignItems: 'center' }}>
+      <div onClick={() => setOpen(!open)} style={{ padding: '12px 16px', cursor: 'pointer', display: 'grid', gridTemplateColumns: isMobile ? '48px 1fr auto' : '60px 1fr auto auto auto', gap: isMobile ? 10 : 16, alignItems: 'center' }}>
         {scan.imageUrl ? (
           <img src={scan.imageUrl} alt="" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
         ) : (
           <div style={{ width: 48, height: 48, borderRadius: 8, background: 'var(--cream)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🍽️</div>
         )}
-        <div>
-          <div style={{ fontWeight: 600, fontSize: 14 }}>{scan.userName || scan.userEmail || 'Unknown'}</div>
-          <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{scan.userName || scan.userEmail || 'Unknown'}</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {scan.finalItems.map(i => i.name).slice(0, 3).join(', ')}{scan.finalItems.length > 3 ? '…' : ''}
           </div>
         </div>
-        <div style={{ fontSize: 12, color: 'var(--muted)' }}>{date.toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
-        <div className="mono" style={{ fontWeight: 600 }}>{scan.totalCal} cal</div>
-        <div style={{ fontSize: 16, minWidth: 24 }}>{feedbackEmoji}{scan.edited ? ' ✎' : ''}</div>
+        {!isMobile && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{date.toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>}
+        <div className="mono" style={{ fontWeight: 600, fontSize: isMobile ? 13 : 14, whiteSpace: 'nowrap' }}>{scan.totalCal}{isMobile ? ' cal' : ' cal'}{feedbackEmoji ? ' ' + feedbackEmoji : ''}{scan.edited ? ' ✎' : ''}</div>
+        {!isMobile && <div style={{ fontSize: 16, minWidth: 24 }}>{feedbackEmoji}{scan.edited ? ' ✎' : ''}</div>}
       </div>
 
       {open && (
         <div style={{ padding: '14px 16px', borderTop: '1px solid var(--border)', background: 'var(--cream)' }}>
           {scan.imageUrl && (
-            <img src={scan.imageUrl} alt="" style={{ maxWidth: 320, maxHeight: 240, borderRadius: 10, marginBottom: 16 }} />
+            <img src={scan.imageUrl} alt="" style={{ maxWidth: isMobile ? '100%' : 320, maxHeight: 240, borderRadius: 10, marginBottom: 16 }} />
           )}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
             <div>
               <div className="label" style={{ marginBottom: 8 }}>Gemini's Prediction (raw)</div>
               <ItemList items={scan.rawItems} />

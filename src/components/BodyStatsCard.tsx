@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation } from 'convex/react'
 import { api } from '../../convex/_generated/api'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 type Sex = 'male' | 'female' | 'other'
 type Activity = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'
@@ -35,6 +36,7 @@ const GOAL_LABELS: Record<Goal, string> = {
 
 export default function BodyStatsCard({ profile }: { profile: Profile }) {
   const updateBodyStats = useMutation(api.users.updateBodyStats)
+  const isMobile = useIsMobile()
   const filled = profile.weightKg !== undefined && profile.heightCm !== undefined && profile.age !== undefined && profile.sex !== undefined && profile.activityLevel !== undefined
 
   const [editing, setEditing] = useState(!filled)
@@ -73,7 +75,7 @@ export default function BodyStatsCard({ profile }: { profile: Profile }) {
           {filled && <button onClick={() => setEditing(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 12, cursor: 'pointer' }}>Cancel</button>}
         </div>
 
-        <form onSubmit={save} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
+        <form onSubmit={save} style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
           <div>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>Weight (kg)</div>
             <input className="input" type="number" value={weightKg} onChange={e => setWeightKg(e.target.value)} placeholder="70" min="30" max="300" step="0.1" required />
@@ -82,12 +84,12 @@ export default function BodyStatsCard({ profile }: { profile: Profile }) {
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>Height (cm)</div>
             <input className="input" type="number" value={heightCm} onChange={e => setHeightCm(e.target.value)} placeholder="175" min="100" max="250" required />
           </div>
-          <div>
+          <div style={isMobile ? { gridColumn: '1 / span 2' } : {}}>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>Age</div>
             <input className="input" type="number" value={age} onChange={e => setAge(e.target.value)} placeholder="30" min="13" max="100" required />
           </div>
 
-          <div>
+          <div style={isMobile ? { gridColumn: '1 / span 2' } : {}}>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>Sex</div>
             <select className="input" value={sex} onChange={e => setSex(e.target.value as Sex)} style={{ appearance: 'auto' }}>
               <option value="male">Male</option>
@@ -95,21 +97,21 @@ export default function BodyStatsCard({ profile }: { profile: Profile }) {
               <option value="other">Other</option>
             </select>
           </div>
-          <div style={{ gridColumn: '2 / span 2' }}>
+          <div style={isMobile ? { gridColumn: '1 / span 2' } : { gridColumn: '2 / span 2' }}>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>Activity level</div>
             <select className="input" value={activity} onChange={e => setActivity(e.target.value as Activity)} style={{ appearance: 'auto' }}>
               {(Object.keys(ACTIVITY_LABELS) as Activity[]).map(a => <option key={a} value={a}>{ACTIVITY_LABELS[a]}</option>)}
             </select>
           </div>
 
-          <div style={{ gridColumn: '1 / span 3' }}>
+          <div style={isMobile ? { gridColumn: '1 / span 2' } : { gridColumn: '1 / span 3' }}>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>Body fat % <span style={{ color: 'var(--muted)' }}>(optional — more accurate if known)</span></div>
             <input className="input" type="number" value={bodyFat} onChange={e => setBodyFat(e.target.value)} placeholder="e.g. 18" min="3" max="60" step="0.1" />
           </div>
 
-          {error && <div style={{ gridColumn: '1 / span 3', color: '#b91c1c', fontSize: 13 }}>{error}</div>}
+          {error && <div style={isMobile ? { gridColumn: '1 / span 2', color: '#b91c1c', fontSize: 13 } : { gridColumn: '1 / span 3', color: '#b91c1c', fontSize: 13 }}>{error}</div>}
 
-          <button type="submit" disabled={saving} className="btn btn-primary" style={{ gridColumn: '1 / span 3', marginTop: 4 }}>
+          <button type="submit" disabled={saving} className="btn btn-primary" style={isMobile ? { gridColumn: '1 / span 2', marginTop: 4 } : { gridColumn: '1 / span 3', marginTop: 4 }}>
             {saving ? 'Calculating…' : 'Calculate maintenance calories'}
           </button>
         </form>

@@ -3,6 +3,7 @@ import { useQuery, useAction } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import Navbar from '../components/Navbar'
 import Progress from '../components/ui/Progress'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 function getChips(): string[] {
   const hour = new Date().getHours()
@@ -15,6 +16,7 @@ function getChips(): string[] {
 const CHIPS_DEFAULT = getChips()
 
 export default function Chat() {
+  const isMobile = useIsMobile()
   const messages = useQuery(api.chat.getChatHistory)
   const profile = useQuery(api.users.getProfile)
   const todayLogs = useQuery(api.meals.getTodayLogs, { date: new Date().toISOString().split('T')[0] })
@@ -49,7 +51,7 @@ export default function Chat() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
       <Navbar />
-      <div className="page" style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 24, height: 'calc(100vh - 64px)', paddingBottom: 0 }}>
+      <div className="page" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 280px', gap: isMobile ? 12 : 24, minHeight: 'calc(100vh - 64px)', paddingBottom: 0 }}>
         {/* Chat column */}
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           {/* Header */}
@@ -118,7 +120,8 @@ export default function Chat() {
           {error && <div style={{ fontSize: 13, color: '#b91c1c', marginTop: 4 }}>{error}</div>}
         </div>
 
-        {/* Sidebar */}
+        {/* Sidebar — hidden on mobile (same info lives on dashboard) */}
+        {!isMobile && (
         <div style={{ paddingTop: 16 }}>
           <div style={{ background: 'var(--sand)', borderRadius: 16, padding: 18, marginBottom: 14 }}>
             <div className="label" style={{ marginBottom: 10 }}>Today's Calories</div>
@@ -137,6 +140,7 @@ export default function Chat() {
             </div>
           </div>
         </div>
+        )}
       </div>
 
       <style>{`
