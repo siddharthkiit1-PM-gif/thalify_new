@@ -549,7 +549,7 @@ export default function Waitlist() {
         <div className="footer">
           <div>&copy; 2026 Thalify &middot; Koramangala, Bengaluru</div>
           <div>
-            <a href="mailto:hello@thalify.com">hello@thalify.com</a>
+            <a href="mailto:siddharth.kiit1@gmail.com">siddharth.kiit1@gmail.com</a>
             <a href="#">Privacy</a>
             <a href="#">Terms</a>
           </div>
