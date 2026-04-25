@@ -109,6 +109,22 @@ export const deleteUserByEmail = internalMutation({
     for (const l of labResults) await ctx.db.delete(l._id);
     summary.labResults = labResults.length;
 
+    // 11a. Delete nudge events
+    const nudgeEvents = await ctx.db
+      .query("nudgeEvents")
+      .withIndex("by_userId_createdAt", q => q.eq("userId", userId))
+      .collect();
+    for (const e of nudgeEvents) await ctx.db.delete(e._id);
+    summary.nudgeEvents = nudgeEvents.length;
+
+    // 11b. Delete notifications
+    const notifs = await ctx.db
+      .query("notifications")
+      .withIndex("by_userId_createdAt", q => q.eq("userId", userId))
+      .collect();
+    for (const n of notifs) await ctx.db.delete(n._id);
+    summary.notifications = notifs.length;
+
     // 11. Delete waitlist entry (if present)
     const waitlist = await ctx.db
       .query("waitlist")
