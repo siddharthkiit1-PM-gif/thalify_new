@@ -63,6 +63,38 @@ export default function Dashboard() {
 
           <NotificationBanner />
 
+          {/* Founder offer — only visible to free-tier users */}
+          {profile && profile.plan !== 'lifetime' && (
+            <div
+              onClick={() => navigate('/upgrade')}
+              style={{
+                background: 'linear-gradient(135deg, var(--sage-100) 0%, #DCEFE0 100%)',
+                border: '1px solid var(--sage-700)',
+                borderRadius: 14,
+                padding: '14px 18px',
+                marginBottom: 16,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+                transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(45,95,58,0.15)' }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}
+            >
+              <div style={{ fontSize: 26 }}>🌿</div>
+              <div style={{ flex: 1 }}>
+                <div className="serif" style={{ fontSize: 17, color: 'var(--ink)', marginBottom: 2, letterSpacing: '-0.005em' }}>
+                  Become a Founder · ₹99 once, lifetime
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--ink-2)' }}>
+                  3,000 AI actions every month, forever. Limited to first 50.
+                </div>
+              </div>
+              <span style={{ fontSize: 18, color: 'var(--sage-700)' }}>→</span>
+            </div>
+          )}
+
           {profile && !profile.telegramOptIn && (
             <div className="tg-card">
               <div className="tg-card-logo">
