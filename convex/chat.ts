@@ -5,6 +5,9 @@ import { api, internal } from "./_generated/api";
 import { generateText, classifyError } from "./ai/claude";
 import { checkRateLimit } from "./lib/rateLimit";
 import { isUnlimitedUser } from "./lib/tiers";
+import { enforceUserQuota } from "./lib/quota";
+
+const ENFORCE_QUOTA = false;
 
 export const enforceChatRateLimit = internalMutation({
   args: { userId: v.id("users") },
@@ -12,6 +15,7 @@ export const enforceChatRateLimit = internalMutation({
     const user = await ctx.db.get(userId);
     const limitKey = isUnlimitedUser(user?.email ?? null) ? "chat" : "chat_free";
     await checkRateLimit(ctx, userId, limitKey);
+    await enforceUserQuota(ctx, userId, "chat", { enforce: ENFORCE_QUOTA });
   },
 });
 
