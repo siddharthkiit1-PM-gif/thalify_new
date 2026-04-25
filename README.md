@@ -350,7 +350,16 @@ This is currently a solo project shipping fast. If you spot a bug or want to sug
 
 ## License
 
-No license has been declared yet. Treat the code as **all rights reserved** until a LICENSE file lands. If you want to use any part of this, please email first.
+Licensed under the **Apache License, Version 2.0** ([LICENSE](./LICENSE)).
+
+In plain English: you can use this code commercially, modify it, distribute it, sublicense it, and use it privately — at no cost. If you redistribute, you must:
+- include a copy of the License,
+- preserve copyright + the [NOTICE](./NOTICE) file, and
+- mark any files you've modified.
+
+Apache 2.0 also gives an **explicit patent grant** from contributors to users — important in the AI/health space. The license terminates if you sue claiming the work infringes a patent.
+
+The Thalify name and logo are not licensed under Apache 2.0 — those remain trademarks of Siddharth Agrawal. Don't ship a fork called "Thalify".
 
 ---
 
