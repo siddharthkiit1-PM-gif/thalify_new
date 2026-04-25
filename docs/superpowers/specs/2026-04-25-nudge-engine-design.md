@@ -290,16 +290,35 @@ Pre-computed per nudge before AI call.
 - User's daily target (from `profiles.calorieGoal`)
 - Today's intake (`sum(mealLogs.totalCal)`)
 - User's goal (lose / maintain / diabetes / gain)
-- The "suggested action" implied by the trigger (e.g., "skip late-night snack" → assume 200 cal saved)
+- The "implied calorie save" for the trigger (lookup table — see below)
+
+**Per-trigger implied-cal-save table** (lives in `convex/nudgeRules.ts`):
+
+| Trigger | impliedCalSave | Action being suggested |
+|---|---|---|
+| `post-dinner-within-budget` | 150 | Skip late-night snack/chai |
+| `post-dinner-over-budget` | (signal uses today's `delta = intake - target`) | Don't add more food |
+| `post-meal-heavy` | 100 | 15-min walk burns this off |
+| `post-scan-heavy` | 100 | Same |
+| `breakfast-skipped` | -100 | (negative — eating breakfast prevents lunch overeating) |
+| `lunch-skipped` | -100 | Same |
+| `dinner-skipped` | 0 | (skip math — just nudge to log) |
+| `over-budget-night` | (use today's `delta`) | Tomorrow lighter resets |
+| `daily-recap` | 0 | (no math — reflective tone) |
+| `streak-N-days` | 0 | (no math — celebratory tone) |
+| `re-engagement` | 0 | (no math — gentle re-entry) |
+| `weekly-recap` | (use 7-day avg `delta`) | — |
 
 **Math:**
 ```
-savedCalsPerDay = action.calsImplied   // domain-specific, e.g., 200 for "skip evening chai"
-kg7Days  = (savedCalsPerDay × 7)  / 7700
-kg30Days = (savedCalsPerDay × 30) / 7700
+savedCalsPerDay = lookupImpliedCalSave(trigger, userToday)
+kg7Days  = clamp(savedCalsPerDay × 7  / 7700, -0.5, 0.5)   // cap at sustainable rate
+kg30Days = clamp(savedCalsPerDay × 30 / 7700, -2.0, 2.0)
 ```
 
 (7700 kcal ≈ 1 kg fat tissue is the textbook approximation.)
+
+If `savedCalsPerDay === 0` → return `signalPrediction = null` (AI generates non-numerical nudge).
 
 **Caps:**
 - Predictions capped at 0.5 kg/week sustainable rate (no aggressive framing)
