@@ -93,6 +93,10 @@ export default defineSchema({
     totalCal: v.number(),
     totalProtein: v.optional(v.number()),
     createdAt: v.number(),
+    // Telegram inline-button flow stamps these once the scan is consumed
+    // into a meal log, so re-taps of the same button can no-op idempotently.
+    consumedAt: v.optional(v.number()),
+    consumedAsMealLogId: v.optional(v.id("mealLogs")),
   }).index("by_userId", ["userId"]).index("by_createdAt", ["createdAt"]),
 
   chatMessages: defineTable({

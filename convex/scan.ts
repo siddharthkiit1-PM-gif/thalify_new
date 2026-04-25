@@ -1,4 +1,4 @@
-import { action, internalAction, internalMutation } from "./_generated/server";
+import { action, internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
@@ -268,5 +268,36 @@ export const saveScanResultInternal = internalMutation({
 
     if (profile) await ctx.db.patch(profile._id, { scanCount: (profile.scanCount ?? 0) + 1 });
     return scanResultId;
+  },
+});
+
+// ─── Internal-callable scan retrieval + consume markers ─────────────────
+// Used by the Telegram inline-button flow: the photo-handler stores a
+// scanResults row, replies with buttons keyed by scanResultId, and the
+// callback handler reads it back here, logs the meal, and stamps the
+// scan as consumed so re-tapping the button is a no-op.
+
+export const getScanResultForUser = internalQuery({
+  args: { scanResultId: v.id("scanResults"), userId: v.id("users") },
+  handler: async (ctx, { scanResultId, userId }) => {
+    const scan = await ctx.db.get(scanResultId);
+    if (!scan || scan.userId !== userId) return null;
+    return scan;
+  },
+});
+
+export const markScanConsumed = internalMutation({
+  args: {
+    scanResultId: v.id("scanResults"),
+    userId: v.id("users"),
+    mealLogId: v.id("mealLogs"),
+  },
+  handler: async (ctx, { scanResultId, userId, mealLogId }) => {
+    const scan = await ctx.db.get(scanResultId);
+    if (!scan || scan.userId !== userId) return;
+    await ctx.db.patch(scanResultId, {
+      consumedAt: Date.now(),
+      consumedAsMealLogId: mealLogId,
+    });
   },
 });
