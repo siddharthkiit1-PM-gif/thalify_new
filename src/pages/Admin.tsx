@@ -129,7 +129,7 @@ function ScanRow({ scan }: { scan: ScanSummary }) {
           )}
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
             <div>
-              <div className="label" style={{ marginBottom: 8 }}>Gemini's Prediction (raw)</div>
+              <div className="label" style={{ marginBottom: 8 }}>AI Prediction (raw)</div>
               <ItemList items={scan.rawItems} />
             </div>
             <div>

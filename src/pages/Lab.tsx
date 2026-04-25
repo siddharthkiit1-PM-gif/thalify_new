@@ -69,10 +69,13 @@ export default function Lab() {
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
       <Navbar />
       <div className="page" style={{ maxWidth: 680, paddingTop: 32 }}>
-        <div style={{ marginBottom: 24 }}>
-          <h1 className="serif" style={{ fontSize: 28, marginBottom: 6 }}>Lab Report Analysis</h1>
-          <p style={{ color: 'var(--muted)', fontSize: 15 }}>
-            Upload your blood work — Claude analyzes your markers and gives personalized Indian food recommendations.
+        <div style={{ marginBottom: 28 }}>
+          <div data-eyebrow style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10 }}>
+            Medical · Bloodwork
+          </div>
+          <h1 className="serif" style={{ fontSize: 36, marginBottom: 8, lineHeight: 1.1, letterSpacing: '-0.015em' }}>Read your labs.</h1>
+          <p style={{ color: 'var(--ink-2)', fontSize: 15.5, lineHeight: 1.55 }}>
+            Upload a photo of your blood report. We translate the numbers into <em style={{ color: 'var(--sage-700)' }}>specific Indian foods</em> to eat more, eat less, or skip — based on your markers.
           </p>
         </div>
 
@@ -107,7 +110,7 @@ export default function Lab() {
             )}
 
             <div style={{ background: 'var(--sage-100)', borderRadius: 12, padding: 16, fontSize: 13, color: 'var(--ink-2)' }}>
-              <div style={{ fontWeight: 600, color: 'var(--sage-700)', marginBottom: 8 }}>What Claude analyzes:</div>
+              <div style={{ fontWeight: 600, color: 'var(--sage-700)', marginBottom: 8 }}>What we read from your report:</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px', lineHeight: 1.7 }}>
                 <span>HbA1c (blood sugar)</span>
                 <span>Cholesterol panel</span>
@@ -141,8 +144,8 @@ export default function Lab() {
         {phase === 'analyzing' && (
           <div style={{ textAlign: 'center', padding: '60px 0' }}>
             <div style={{ fontSize: 48, marginBottom: 20 }}>🔬</div>
-            <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>Analyzing your lab report</div>
-            <div style={{ color: 'var(--muted)', fontSize: 14 }}>Claude is reading your markers and building personalized recommendations…</div>
+            <div className="serif" style={{ fontWeight: 400, fontSize: 22, marginBottom: 8, letterSpacing: '-0.01em' }}>Reading your report</div>
+            <div style={{ color: 'var(--muted)', fontSize: 14 }}>Pulling each marker out, then matching it to Indian foods that move it…</div>
             <div style={{ marginTop: 24, display: 'flex', justifyContent: 'center', gap: 6 }}>
               {[0, 1, 2].map(i => (
                 <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--sage-700)', animation: 'pulse 1.2s ease-in-out infinite', animationDelay: `${i * 0.3}s` }} />

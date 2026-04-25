@@ -29,9 +29,9 @@ export default function Scan() {
   const recentScans = useQuery(api.meals.getRecentLogs)
   const profile = useQuery(api.users.getProfile)
   const setPhotoStorage = useMutation(api.users.setPhotoStoragePreference)
-  // If the user registered before we added the consent step, allowPhotoStorage
-  // is undefined and we surface an explicit banner before letting them scan.
-  const needsPhotoConsent = profile !== undefined && profile !== null && profile.allowPhotoStorage === undefined
+  // Default-on: treat undefined (legacy users) as opt-in. The inline checkbox
+  // below the upload zone is the only place users manage this now.
+  const photoSavingOn = profile === null || profile === undefined ? true : profile.allowPhotoStorage !== false
 
   const [phase, setPhase] = useState<'upload' | 'scanning' | 'result' | 'logged'>('upload')
   const [items, setItems] = useState<ScanItem[]>([])
@@ -134,55 +134,71 @@ export default function Scan() {
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
       <Navbar />
       <div className="page" style={{ maxWidth: 680 }}>
-        <h1 className="serif" style={{ fontSize: 32, marginBottom: 4 }}>Scan Meal</h1>
-        <p style={{ color: 'var(--muted)', marginBottom: 24 }}>Photo to calories in 3 seconds · Edit anything that looks off</p>
+        <div data-eyebrow style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10 }}>
+          Scan · {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
+        </div>
+        <h1 className="serif" style={{ fontSize: 36, marginBottom: 6, lineHeight: 1.1, letterSpacing: '-0.015em' }}>Snap your plate.</h1>
+        <p style={{ color: 'var(--ink-2)', marginBottom: 28, fontSize: 15.5, lineHeight: 1.5 }}>
+          Three seconds from photo to calories. Edit anything that looks off — we get better every time you do.
+        </p>
 
-        {phase === 'upload' && needsPhotoConsent && (
-          <div style={{ background: 'var(--sand)', border: '2px solid var(--sage-700)', borderRadius: 16, padding: 22, marginBottom: 16 }}>
-            <div style={{ fontSize: 22, marginBottom: 8 }}>📸</div>
-            <div className="serif" style={{ fontSize: 20, marginBottom: 8 }}>Before your first scan</div>
-            <p style={{ fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.55, marginBottom: 16 }}>
-              We can keep your meal photo to improve how accurately Thalify identifies Indian food over time. Your choice — change it anytime from the profile menu.
-            </p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                className="btn btn-primary"
-                style={{ flex: 1 }}
-                onClick={() => setPhotoStorage({ allow: true }).catch(console.error)}
-              >Yes, keep photos</button>
-              <button
-                className="btn btn-secondary"
-                style={{ flex: 1 }}
-                onClick={() => setPhotoStorage({ allow: false }).catch(console.error)}
-              >No, delete after scan</button>
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 10, lineHeight: 1.5 }}>
-              Stored securely, never shared with third parties. Used only to make scan recognition better.
-            </div>
-          </div>
-        )}
-
-        {phase === 'upload' && !needsPhotoConsent && (
+        {phase === 'upload' && (
           <>
             <div
+              className="scan-upload"
               onDrop={handleDrop}
               onDragOver={e => e.preventDefault()}
-              style={{ border: '2px dashed var(--border)', borderRadius: 18, padding: 48, textAlign: 'center', background: 'var(--sand)', cursor: 'pointer' }}
+              style={{
+                border: '2px dashed var(--border)',
+                borderRadius: 18,
+                padding: 56,
+                textAlign: 'center',
+                background: 'var(--sand)',
+                cursor: 'pointer',
+                transition: 'border-color 0.2s, background 0.2s',
+              }}
               onClick={() => document.getElementById('file-input')?.click()}
+              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--sage-700)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)' }}
             >
-              <div style={{ fontSize: 40, marginBottom: 12 }}>📷</div>
-              <div style={{ fontWeight: 600, marginBottom: 6 }}>Drop your meal photo here</div>
-              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 18 }}>or click to upload · JPG / PNG</div>
+              <div style={{ fontSize: 44, marginBottom: 14 }}>📷</div>
+              <div className="serif" style={{ fontSize: 22, marginBottom: 6, letterSpacing: '-0.01em' }}>Drop a meal photo</div>
+              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 22 }}>or click to upload · JPG, PNG, HEIC</div>
               <button className="btn btn-primary">Choose Photo</button>
               <input id="file-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
             </div>
-            <div style={{ marginTop: 14, fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
-              💡 <b>Pro tip:</b> include a spoon or coin in the shot for more accurate portion estimation.{' '}
-              {profile?.allowPhotoStorage === false ? (
-                <>🔒 Photos discarded after scan (your setting).</>
-              ) : (
-                <>We keep your photo to improve recognition — change in profile menu.</>
-              )}
+
+            {/* Inline photo-saving checkbox — directly below the upload zone */}
+            <label
+              style={{
+                marginTop: 14,
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 12,
+                padding: '14px 16px',
+                background: 'var(--cream)',
+                border: '1px solid var(--border)',
+                borderRadius: 12,
+                cursor: 'pointer',
+                userSelect: 'none',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={photoSavingOn}
+                onChange={e => setPhotoStorage({ allow: e.target.checked }).catch(console.error)}
+                style={{ marginTop: 2, accentColor: 'var(--sage-700)', width: 16, height: 16, cursor: 'pointer' }}
+              />
+              <span style={{ flex: 1, fontSize: 13, lineHeight: 1.5, color: 'var(--ink-2)' }}>
+                <b style={{ color: 'var(--ink)' }}>Save my photo to improve our AI model.</b>{' '}
+                <span style={{ color: 'var(--muted)' }}>
+                  Stored securely, never shared. Untick to delete after each scan.
+                </span>
+              </span>
+            </label>
+
+            <div style={{ marginTop: 14, fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.55 }}>
+              💡 <b style={{ color: 'var(--ink-2)' }}>Pro tip:</b> include a spoon or coin in the shot — it sharpens portion estimation by ~15%.
             </div>
           </>
         )}
@@ -213,7 +229,7 @@ export default function Scan() {
               </select>
             </div>
 
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>Tap any field to fix Gemini's guess — helps us get better over time.</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>Tap any field to fix what our AI got wrong — every correction trains the model.</div>
 
             <div style={{ background: 'var(--sand)', borderRadius: 16, overflow: 'hidden', marginBottom: 14 }}>
               {items.map((item, i) => (

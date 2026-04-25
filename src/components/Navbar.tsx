@@ -4,6 +4,7 @@ import { useAuthActions } from '@convex-dev/auth/react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import { useIsMobile } from '../hooks/useIsMobile'
+import NotificationBell from './NotificationBell'
 
 const LINKS = [
   { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
@@ -79,7 +80,8 @@ export default function Navbar() {
             >{s.label}</div>
           ))}
         </div>
-        <div className="nav-right" ref={menuRef} style={{ position: 'relative' }}>
+        <div className="nav-right" ref={menuRef} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <NotificationBell />
           <div
             onClick={() => setMenuOpen(o => !o)}
             style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '4px 10px 4px 4px', borderRadius: 99, background: menuOpen ? 'var(--sand)' : 'transparent', transition: 'background 0.15s' }}

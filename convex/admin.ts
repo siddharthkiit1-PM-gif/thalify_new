@@ -1,5 +1,6 @@
-import { internalMutation } from "./_generated/server";
+import { internalMutation, internalAction } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 
 /**
  * Admin cleanup: fully remove a user and all auth/profile records by email.
@@ -109,6 +110,22 @@ export const deleteUserByEmail = internalMutation({
     for (const l of labResults) await ctx.db.delete(l._id);
     summary.labResults = labResults.length;
 
+    // 11a. Delete nudge events
+    const nudgeEvents = await ctx.db
+      .query("nudgeEvents")
+      .withIndex("by_userId_createdAt", q => q.eq("userId", userId))
+      .collect();
+    for (const e of nudgeEvents) await ctx.db.delete(e._id);
+    summary.nudgeEvents = nudgeEvents.length;
+
+    // 11b. Delete notifications
+    const notifs = await ctx.db
+      .query("notifications")
+      .withIndex("by_userId_createdAt", q => q.eq("userId", userId))
+      .collect();
+    for (const n of notifs) await ctx.db.delete(n._id);
+    summary.notifications = notifs.length;
+
     // 11. Delete waitlist entry (if present)
     const waitlist = await ctx.db
       .query("waitlist")
@@ -122,5 +139,44 @@ export const deleteUserByEmail = internalMutation({
     summary.user = 1;
 
     return { found: true, userId, email: normalized, summary };
+  },
+});
+
+/**
+ * Revive nudgeEvents that were skipped with reason "quiet" so the worker
+ * picks them up on the next tick. Use after widening the quiet-hours window.
+ * Skips events older than 4h (the worker would mark them stale anyway).
+ */
+export const reviveQuietSkippedEvents = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const cutoff = Date.now() - 4 * 3600 * 1000;
+    const events = await ctx.db
+      .query("nudgeEvents")
+      .withIndex("by_status_createdAt", (q) => q.eq("status", "skipped"))
+      .collect();
+    const reviveable = events.filter(
+      (e) => e.skipReason === "quiet" && e.createdAt >= cutoff,
+    );
+    for (const e of reviveable) {
+      await ctx.db.patch(e._id, {
+        status: "pending",
+        skipReason: undefined,
+        processedAt: undefined,
+      });
+    }
+    return { revived: reviveable.length };
+  },
+});
+
+/**
+ * Manually kick the worker once — useful right after revive.
+ */
+export const runWorkerOnce = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const result: { processed: number; total: number; reason?: string } =
+      await ctx.runAction(internal.nudges.worker.processNudgeQueue, {});
+    return result;
   },
 });

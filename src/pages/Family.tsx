@@ -70,8 +70,13 @@ export default function Family() {
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
       <Navbar />
       <div className="page" style={{ maxWidth: 720 }}>
-        <h1 className="serif" style={{ fontSize: 32, marginBottom: 4 }}>Family Meal Optimizer</h1>
-        <p style={{ color: 'var(--muted)', marginBottom: 28 }}>Add tonight's dishes — get personalized plate guidance</p>
+        <div data-eyebrow style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10 }}>
+          Family · Tonight's menu
+        </div>
+        <h1 className="serif" style={{ fontSize: 36, marginBottom: 8, lineHeight: 1.1, letterSpacing: '-0.015em' }}>Eat what's cooked. Eat the right amount.</h1>
+        <p style={{ color: 'var(--ink-2)', marginBottom: 28, fontSize: 15.5, lineHeight: 1.55 }}>
+          Add the dishes Mummy made. We tell you what to keep, what to halve, and what to skip — for <em style={{ color: 'var(--sage-700)' }}>your goal</em>, not the family's.
+        </p>
 
         {/* Dish input */}
         <div style={{ background: 'var(--sand)', borderRadius: 18, padding: 22, marginBottom: 20 }}>

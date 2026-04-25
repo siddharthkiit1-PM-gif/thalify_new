@@ -142,7 +142,7 @@ export default function Auth() {
     const firstName = createdName.split(/\s+/)[0] || 'there'
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--cream)', padding: 20 }}>
-        <div style={{ width: '100%', maxWidth: 440, padding: 40, background: 'var(--sand)', borderRadius: 20, border: '1px solid var(--border)', textAlign: 'center' }}>
+        <div className="auth-card" style={{ width: '100%', maxWidth: 440, background: 'var(--sand)', borderRadius: 20, border: '1px solid var(--border)', textAlign: 'center' }}>
           <div className="brand" style={{ marginBottom: 24, justifyContent: 'center' }}>
             <div className="brand-mark">Th</div>
             <span style={{ fontSize: 18, fontWeight: 600 }}>Thalify</span>
@@ -168,8 +168,8 @@ export default function Auth() {
 
   // Shell wrapper for the remaining views
   const wrapper = (content: React.ReactNode) => (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--cream)' }}>
-      <div style={{ width: '100%', maxWidth: 420, padding: 40, background: 'var(--sand)', borderRadius: 20, border: '1px solid var(--border)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--cream)', padding: 16 }}>
+      <div className="auth-card" style={{ width: '100%', maxWidth: 420, background: 'var(--sand)', borderRadius: 20, border: '1px solid var(--border)' }}>
         <div className="brand" style={{ marginBottom: 24 }}>
           <div className="brand-mark">Th</div>
           <span style={{ fontSize: 18, fontWeight: 600 }}>Thalify</span>
@@ -241,10 +241,17 @@ export default function Auth() {
   // Default: login / register
   return wrapper(
     <>
+      <div data-eyebrow style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '0.2em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>
+        {tab === 'login' ? 'Welcome back' : 'Get started'}
+      </div>
+      <h2 className="serif" style={{ fontSize: 24, marginBottom: 18, letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+        {tab === 'login' ? 'Sign in to your kitchen.' : 'Create your account.'}
+      </h2>
+
       {isFromWaitlist && tab === 'register' && (
         <div style={{ background: 'var(--sage-100, #EEF7EC)', color: 'var(--sage-700)', padding: '12px 14px', borderRadius: 10, marginBottom: 20, fontSize: 13, lineHeight: 1.5 }}>
-          <div style={{ fontWeight: 700, marginBottom: 2 }}>Welcome — your early access is active.</div>
-          <div style={{ color: 'var(--ink-2)' }}>Set a password to create your account.</div>
+          <div style={{ fontWeight: 700, marginBottom: 2 }}>Your early access is active.</div>
+          <div style={{ color: 'var(--ink-2)' }}>Set a password — that's it. You're locked in as one of the first 500.</div>
         </div>
       )}
 

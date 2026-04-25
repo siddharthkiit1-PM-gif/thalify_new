@@ -55,12 +55,17 @@ export default function Chat() {
         {/* Chat column */}
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 0', borderBottom: '1px solid var(--border)', marginBottom: 16 }}>
-            <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--sage-100)', display: 'grid', placeItems: 'center', fontSize: 20 }}>🧠</div>
-            <div>
-              <div style={{ fontWeight: 700 }}>Your Health Buddy</div>
-              <div style={{ fontSize: 12, color: 'var(--sage-700)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span className="online-dot" /> Online · Responds instantly
+          <div style={{ padding: '20px 0 14px' }}>
+            <div data-eyebrow style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>
+              Health Buddy · Always on
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
+              <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--sage-100)', display: 'grid', placeItems: 'center', fontSize: 22 }}>🧠</div>
+              <div>
+                <div className="serif" style={{ fontSize: 18, letterSpacing: '-0.005em' }}>Ask me anything about your meals.</div>
+                <div style={{ fontSize: 12, color: 'var(--sage-700)', display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                  <span className="online-dot" /> Online · Hinglish + 4 more languages
+                </div>
               </div>
             </div>
           </div>
@@ -68,9 +73,10 @@ export default function Chat() {
           {/* Messages */}
           <div style={{ flex: 1, overflowY: 'auto', paddingRight: 4 }}>
             {messages?.length === 0 && !thinking && (
-              <div style={{ textAlign: 'center', padding: 48, color: 'var(--muted)' }}>
-                <div style={{ fontSize: 32, marginBottom: 12 }}>👋</div>
-                <div>Ask me anything about your diet or today's meals!</div>
+              <div style={{ textAlign: 'center', padding: 48, color: 'var(--muted)', maxWidth: 320, margin: '0 auto' }}>
+                <div style={{ fontSize: 36, marginBottom: 14 }}>👋</div>
+                <div className="serif" style={{ fontSize: 20, color: 'var(--ink)', marginBottom: 6, letterSpacing: '-0.01em' }}>Pull up a chair.</div>
+                <div style={{ fontSize: 14, lineHeight: 1.55 }}>Ask about a craving, a wedding menu, or what to do after one too many gulab jamuns.</div>
               </div>
             )}
             {messages?.map(msg => (

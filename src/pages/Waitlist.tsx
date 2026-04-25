@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAction } from 'convex/react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../convex/_generated/api'
+import TelegramLogo from '../components/TelegramLogo'
 import './Waitlist.css'
 
 // Launch target: Friday 25 April 2026, 9:00 AM IST
@@ -191,7 +192,7 @@ function HeroFormLive({ dark = false, inline = false }: HeroFormProps) {
       <input
         className="dark-input"
         type="tel"
-        placeholder="WhatsApp number (optional &mdash; for nudges)"
+        placeholder="Phone (optional &mdash; we&rsquo;ll text when WhatsApp launches)"
         value={phone}
         onChange={e => setPhone(e.target.value)}
       />
@@ -250,6 +251,16 @@ export default function Waitlist() {
   return (
     <div>
       <LaunchBar />
+      <div className="channel-bar">
+        <span className="channel-now">
+          <TelegramLogo size={14} style={{ marginRight: 6, verticalAlign: '-3px' }} />
+          Live now: Telegram nudges
+        </span>
+        <span className="channel-sep">·</span>
+        <span className="channel-soon">
+          <span className="channel-soon-dot" /> Coming next month: WhatsApp nudges
+        </span>
+      </div>
 
       {/* Nav */}
       <div className="waitlist-nav">
@@ -277,14 +288,16 @@ export default function Waitlist() {
           </h1>
           <p className="hero-sub">
             The first AI health coach that speaks <b>&#2342;&#2366;&#2354;, &#2330;&#2366;&#2357;&#2354;, &#2360;&#2366;&#2306;&#2348;&#2366;&#2352;</b> &mdash; not kale.
-            Snap your thali in the app. Get smart nudges on WhatsApp. Stay on your
+            Snap your thali in the app. Get smart nudges on Telegram. Stay on your
             family&apos;s dinner table, not off it.
           </p>
           <HeroForm inline />
           <div className="hero-trust">
             <span>&#128274; No spam, ever</span>
             <span>&middot;</span>
-            <span>&#128241; App + WhatsApp nudges</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <TelegramLogo size={14} /> App + Telegram nudges
+            </span>
             <span>&middot;</span>
             <span>&#127470;&#127475; 5 languages at launch</span>
           </div>
@@ -358,10 +371,11 @@ export default function Waitlist() {
         <div className="pillars-head">
           <div className="problem-label">three things &middot; zero friction</div>
           <h2 style={{ fontFamily: 'var(--serif)', fontSize: 46, fontWeight: 400, margin: '14px 0 10px', letterSpacing: '-0.015em' }}>
-            A real app, with <em style={{ color: 'var(--sage-700)' }}>WhatsApp nudges</em> when you need them.
+            A real app, with <em style={{ color: 'var(--sage-700)' }}>Telegram nudges</em> when you need them.
           </h2>
           <div style={{ color: 'var(--muted)', fontSize: 15.5 }}>
-            Photo scanner, dashboard, lab reports &mdash; all in the app. Quick check-ins and 10 PM nudges land on WhatsApp.
+            Photo scanner, dashboard, lab reports &mdash; all in the app. Quick check-ins and 10 PM nudges land on Telegram.{' '}
+            <span style={{ color: 'var(--ink-2)' }}>WhatsApp nudges launching next month.</span>
           </div>
         </div>
 
@@ -369,17 +383,22 @@ export default function Waitlist() {
           <div className="pillar">
             <div className="pillar-head">
               <div className="pillar-num">01 &middot; SPEAK</div>
-              <div className="pillar-title">Quick question?<br />Voice-note us on WhatsApp.</div>
+              <div className="pillar-title" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                Quick question?<br />
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  Message <TelegramLogo size={20} style={{ verticalAlign: '-4px' }} /> our Telegram bot.
+                </span>
+              </div>
             </div>
             <div className="pillar-body">
               <div className="pillar-desc">
-                For 10 PM cravings or restaurant menus, WhatsApp is faster than opening the app. Ask in Hinglish or Tamil &mdash; reply in seconds.
+                For 10 PM cravings or restaurant menus, Telegram is faster than opening the app. Ask in Hinglish or Tamil &mdash; reply in seconds.
               </div>
-              <div className="wa-mock">
-                <div className="wa-bubble">&#127908; 0:06 <span className="wa-time">10:58 PM</span></div>
-                <div className="wa-bubble out">
-                  Gulab jamun @ wedding? Go for 1, not 3. Walk 20 min after. You&apos;re still under 1,800 today &#10003;{' '}
-                  <span className="wa-time">10:58 PM</span>
+              <div className="tg-mock">
+                <div className="tg-bubble">Gulab jamun at this wedding &mdash; how many? <span className="tg-time">10:58 PM</span></div>
+                <div className="tg-bubble out">
+                  Go for 1, not 3. Walk 20 min after. You&rsquo;re still under 1,800 today &#10003;{' '}
+                  <span className="tg-time">10:58 PM</span>
                 </div>
               </div>
             </div>
@@ -502,8 +521,8 @@ export default function Waitlist() {
               a="Yes. The first 500 pay Rs 0, ever. No trial tricks, no feature-gating later. We'll grandfather your account and note it in our records. Anyone joining after 500 pays Rs 199/month."
             />
             <FaqItem
-              q="Is this an app, or a WhatsApp bot?"
-              a="It's a real app (web + mobile) — that's where the photo scanner, dashboard, lab reports, and meal planner live. WhatsApp is an optional companion for quick voice-note questions and nudges."
+              q="Is this an app, or a Telegram bot?"
+              a="It's a real app (web + mobile) — that's where the photo scanner, dashboard, lab reports, and meal planner live. Telegram is an optional companion for quick questions and nudges. WhatsApp nudges are launching next month."
             />
             <FaqItem
               q="How accurate is the photo scanner on Indian food?"
@@ -519,7 +538,7 @@ export default function Waitlist() {
             />
             <FaqItem
               q="Why should I trust you with my health data?"
-              a="We store the minimum we need to coach you. No third-party ads, ever. Your data never leaves India. Delete everything with one WhatsApp message."
+              a="We store the minimum we need to coach you. No third-party ads, ever. Your data never leaves India. Delete everything with one tap from your account settings."
             />
           </div>
         </div>

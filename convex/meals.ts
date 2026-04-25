@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { internal } from "./_generated/api";
 
 export const getTodayLogs = query({
   args: { date: v.string() },
@@ -28,7 +29,13 @@ export const logMeal = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
-    return await ctx.db.insert("mealLogs", { userId, ...args });
+    const mealId = await ctx.db.insert("mealLogs", { userId, ...args });
+    await ctx.scheduler.runAfter(0, internal.nudges.queue.enqueue, {
+      userId,
+      type: "meal_logged",
+      payload: { mealType: args.mealType, totalCal: args.totalCal },
+    });
+    return mealId;
   },
 });
 

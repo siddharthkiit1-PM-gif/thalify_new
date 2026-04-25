@@ -8,12 +8,14 @@
  * @module
  */
 
+import type * as __fixtures___nudges from "../__fixtures__/nudges.js";
 import type * as accountEmails from "../accountEmails.js";
 import type * as admin from "../admin.js";
 import type * as adminScans from "../adminScans.js";
 import type * as ai_claude from "../ai/claude.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
+import type * as crons from "../crons.js";
 import type * as data_foodMatcher from "../data/foodMatcher.js";
 import type * as data_indianFoods from "../data/indianFoods.js";
 import type * as email from "../email.js";
@@ -25,13 +27,29 @@ import type * as lib_rateLimit from "../lib/rateLimit.js";
 import type * as lib_security from "../lib/security.js";
 import type * as lib_tiers from "../lib/tiers.js";
 import type * as meals from "../meals.js";
+import type * as nudges_aiWriter from "../nudges/aiWriter.js";
+import type * as nudges_gatekeepers from "../nudges/gatekeepers.js";
+import type * as nudges_queries from "../nudges/queries.js";
+import type * as nudges_queue from "../nudges/queue.js";
+import type * as nudges_rules from "../nudges/rules.js";
+import type * as nudges_seed from "../nudges/seed.js";
+import type * as nudges_signal from "../nudges/signal.js";
+import type * as nudges_templatePicker from "../nudges/templatePicker.js";
+import type * as nudges_timeSeeders from "../nudges/timeSeeders.js";
+import type * as nudges_worker from "../nudges/worker.js";
 import type * as passwordReset from "../passwordReset.js";
 import type * as patterns from "../patterns.js";
 import type * as scan from "../scan.js";
 import type * as scanFeedback from "../scanFeedback.js";
 import type * as storage from "../storage.js";
+import type * as telegram_adapter from "../telegram/adapter.js";
+import type * as telegram_connect from "../telegram/connect.js";
+import type * as telegram_webhook from "../telegram/webhook.js";
 import type * as users from "../users.js";
 import type * as waitlist from "../waitlist.js";
+import type * as whatsapp_adapter from "../whatsapp/adapter.js";
+import type * as whatsapp_optIn from "../whatsapp/optIn.js";
+import type * as whatsapp_webhook from "../whatsapp/webhook.js";
 
 import type {
   ApiFromModules,
@@ -40,12 +58,14 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "__fixtures__/nudges": typeof __fixtures___nudges;
   accountEmails: typeof accountEmails;
   admin: typeof admin;
   adminScans: typeof adminScans;
   "ai/claude": typeof ai_claude;
   auth: typeof auth;
   chat: typeof chat;
+  crons: typeof crons;
   "data/foodMatcher": typeof data_foodMatcher;
   "data/indianFoods": typeof data_indianFoods;
   email: typeof email;
@@ -57,13 +77,29 @@ declare const fullApi: ApiFromModules<{
   "lib/security": typeof lib_security;
   "lib/tiers": typeof lib_tiers;
   meals: typeof meals;
+  "nudges/aiWriter": typeof nudges_aiWriter;
+  "nudges/gatekeepers": typeof nudges_gatekeepers;
+  "nudges/queries": typeof nudges_queries;
+  "nudges/queue": typeof nudges_queue;
+  "nudges/rules": typeof nudges_rules;
+  "nudges/seed": typeof nudges_seed;
+  "nudges/signal": typeof nudges_signal;
+  "nudges/templatePicker": typeof nudges_templatePicker;
+  "nudges/timeSeeders": typeof nudges_timeSeeders;
+  "nudges/worker": typeof nudges_worker;
   passwordReset: typeof passwordReset;
   patterns: typeof patterns;
   scan: typeof scan;
   scanFeedback: typeof scanFeedback;
   storage: typeof storage;
+  "telegram/adapter": typeof telegram_adapter;
+  "telegram/connect": typeof telegram_connect;
+  "telegram/webhook": typeof telegram_webhook;
   users: typeof users;
   waitlist: typeof waitlist;
+  "whatsapp/adapter": typeof whatsapp_adapter;
+  "whatsapp/optIn": typeof whatsapp_optIn;
+  "whatsapp/webhook": typeof whatsapp_webhook;
 }>;
 
 /**

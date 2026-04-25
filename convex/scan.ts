@@ -110,6 +110,12 @@ export const scanMeal = action({
       imageStorageId,
     });
 
+    await ctx.runMutation(internal.nudges.queue.enqueue, {
+      userId,
+      type: "scan_completed",
+      payload: { totalCal, itemCount: cleaned.length },
+    });
+
     return { scanResultId, items: cleaned, totalCal, totalProtein };
   },
 });

@@ -31,6 +31,17 @@ export default defineSchema({
     tdee: v.optional(v.number()),
     // User can opt-out of photo storage (defaults to true = store photos for training)
     allowPhotoStorage: v.optional(v.boolean()),
+    // WhatsApp delivery for nudges (separate consent flow with 6-digit verification)
+    whatsappNumber: v.optional(v.string()),       // E.164: "+919876543210"
+    whatsappOptIn: v.optional(v.boolean()),
+    whatsappVerifiedAt: v.optional(v.number()),
+    whatsappPendingCode: v.optional(v.string()),
+    whatsappPendingCodeExpiresAt: v.optional(v.number()),
+    telegramChatId: v.optional(v.string()),
+    telegramOptIn: v.optional(v.boolean()),
+    telegramVerifiedAt: v.optional(v.number()),
+    telegramConnectToken: v.optional(v.string()),
+    telegramConnectExpiresAt: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
 
   mealLogs: defineTable({
@@ -129,4 +140,77 @@ export default defineSchema({
     events: v.array(v.number()),
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
+
+  // ─── Nudge engine (events queue, template library, output notifications) ───
+  nudgeEvents: defineTable({
+    userId: v.id("users"),
+    type: v.union(
+      v.literal("meal_logged"),
+      v.literal("scan_completed"),
+      v.literal("time_breakfast_check"),
+      v.literal("time_lunch_check"),
+      v.literal("time_dinner_check"),
+      v.literal("time_daily_summary"),
+      v.literal("streak_milestone"),
+      v.literal("gap_detected"),
+      v.literal("weekly_insight"),
+    ),
+    payload: v.optional(v.any()),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("processed"),
+      v.literal("skipped"),
+      v.literal("failed"),
+    ),
+    notificationId: v.optional(v.id("notifications")),
+    processedAt: v.optional(v.number()),
+    skipReason: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_status_createdAt", ["status", "createdAt"])
+    .index("by_userId_createdAt", ["userId", "createdAt"]),
+
+  nudgeTemplates: defineTable({
+    bucket: v.union(
+      v.literal("hydration"), v.literal("movement"), v.literal("praise"),
+      v.literal("recovery"), v.literal("prompt"), v.literal("reflection"),
+      v.literal("plan"),
+    ),
+    trigger: v.string(),
+    variant: v.string(),
+    template: v.string(),
+    active: v.boolean(),
+    weight: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_bucket_active", ["bucket", "active"])
+    .index("by_trigger_active", ["trigger", "active"]),
+
+  notifications: defineTable({
+    userId: v.id("users"),
+    bucket: v.union(
+      v.literal("hydration"), v.literal("movement"), v.literal("praise"),
+      v.literal("recovery"), v.literal("prompt"), v.literal("reflection"),
+      v.literal("plan"),
+    ),
+    message: v.string(),
+    trigger: v.string(),
+    templateId: v.optional(v.id("nudgeTemplates")),
+    variant: v.optional(v.string()),
+    signalPrediction: v.optional(v.object({
+      savedCalsPerDay: v.number(),
+      kg7Days: v.number(),
+      kg30Days: v.number(),
+      context: v.string(),
+    })),
+    expiresAt: v.optional(v.number()),
+    aiFallback: v.optional(v.boolean()),
+    deliveredViaWhatsApp: v.optional(v.boolean()),
+    whatsappMessageId: v.optional(v.string()),
+    deliveredViaTelegram: v.optional(v.boolean()),
+    telegramMessageId: v.optional(v.string()),
+    read: v.boolean(),
+    readAt: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_userId_createdAt", ["userId", "createdAt"])
+    .index("by_userId_bucket_createdAt", ["userId", "bucket", "createdAt"])
+    .index("by_variant_createdAt", ["variant", "createdAt"]),
 });
