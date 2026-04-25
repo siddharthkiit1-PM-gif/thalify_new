@@ -1,5 +1,7 @@
 # Nudge Engine Implementation Plan
 
+> ✅ **STATUS: SHIPPED 2026-04-25.** All 22 tasks completed and live in production. This document is kept for historical reference and as a planning template. Read the [README](../../../README.md) for the current state of the system.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build an event-driven nudge engine on top of Gemini that decides when to nudge users (rule-based) and uses AI as a writer to personalize each message. Deliver via in-app (banner + bell) and WhatsApp.
