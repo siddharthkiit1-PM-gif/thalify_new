@@ -1,6 +1,4 @@
-import type { MockTemplate } from "../__fixtures__/nudges";
-
-export function pickTemplate<T extends Pick<MockTemplate, "weight">>(
+export function pickTemplate<T extends { weight?: number }>(
   templates: T[],
 ): T | null {
   if (templates.length === 0) return null;
