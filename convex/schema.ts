@@ -37,6 +37,11 @@ export default defineSchema({
     whatsappVerifiedAt: v.optional(v.number()),
     whatsappPendingCode: v.optional(v.string()),
     whatsappPendingCodeExpiresAt: v.optional(v.number()),
+    telegramChatId: v.optional(v.string()),
+    telegramOptIn: v.optional(v.boolean()),
+    telegramVerifiedAt: v.optional(v.number()),
+    telegramConnectToken: v.optional(v.string()),
+    telegramConnectExpiresAt: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
 
   mealLogs: defineTable({
@@ -200,6 +205,8 @@ export default defineSchema({
     aiFallback: v.optional(v.boolean()),
     deliveredViaWhatsApp: v.optional(v.boolean()),
     whatsappMessageId: v.optional(v.string()),
+    deliveredViaTelegram: v.optional(v.boolean()),
+    telegramMessageId: v.optional(v.string()),
     read: v.boolean(),
     readAt: v.optional(v.number()),
     createdAt: v.number(),

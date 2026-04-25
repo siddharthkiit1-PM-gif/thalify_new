@@ -6,7 +6,7 @@ import Navbar from '../components/Navbar'
 import Progress from '../components/ui/Progress'
 import BodyStatsCard from '../components/BodyStatsCard'
 import NotificationBanner from '../components/NotificationBanner'
-import WhatsappOptInModal from '../components/WhatsappOptInModal'
+import TelegramConnectModal from '../components/TelegramConnectModal'
 import { useIsMobile } from '../hooks/useIsMobile'
 
 function todayDate() { return new Date().toISOString().split('T')[0] }
@@ -25,7 +25,7 @@ const MEAL_ICON: Record<string, string> = {
 export default function Dashboard() {
   const navigate = useNavigate()
   const isMobile = useIsMobile()
-  const [waOpen, setWaOpen] = useState(false)
+  const [tgOpen, setTgOpen] = useState(false)
   const profile = useQuery(api.users.getProfile)
   const currentUser = useQuery(api.users.getCurrentUser)
   const todayLogs = useQuery(api.meals.getTodayLogs, { date: todayDate() })
@@ -60,15 +60,18 @@ export default function Dashboard() {
 
           <NotificationBanner />
 
-          {profile && !profile.whatsappOptIn && (
+          {profile && !profile.telegramOptIn && (
             <div style={{ background: 'var(--sand)', borderRadius: 12, padding: 14, marginBottom: 16 }}>
-              <div style={{ fontSize: 13, marginBottom: 6 }}>📱 Get nudges on WhatsApp</div>
-              <button className="btn btn-secondary btn-sm" onClick={() => setWaOpen(true)}>
-                Set it up
+              <div style={{ fontSize: 13, marginBottom: 6 }}>✈️ Get nudges on Telegram</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
+                One tap. No phone number. Free, forever.
+              </div>
+              <button className="btn btn-secondary btn-sm" onClick={() => setTgOpen(true)}>
+                Connect Telegram
               </button>
             </div>
           )}
-          <WhatsappOptInModal open={waOpen} onClose={() => setWaOpen(false)} />
+          <TelegramConnectModal open={tgOpen} onClose={() => setTgOpen(false)} />
 
           <BodyStatsCard profile={profile as never} />
 

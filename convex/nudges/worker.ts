@@ -97,6 +97,8 @@ export const processSingleEvent = internalAction({
       lastBucketTimestamps: Record<string, number>;
       whatsappOptIn: boolean;
       whatsappNumber?: string;
+      telegramOptIn: boolean;
+      telegramChatId?: string;
     };
     const state: UserStateResult | null = await ctx.runQuery(
       internal.nudges.worker.buildUserState,
@@ -199,6 +201,21 @@ export const processSingleEvent = internalAction({
       },
     );
 
+    if (state.telegramOptIn && state.telegramChatId) {
+      const { sendText: sendTelegram } = await import("../telegram/adapter");
+      const result = await sendTelegram(state.telegramChatId, written.message);
+      if (result.success) {
+        await ctx.runMutation(internal.nudges.worker.markTelegramDelivered, {
+          notificationId,
+          messageId: result.messageId ?? "",
+        });
+      } else {
+        console.warn(
+          `telegram send failed for ${event.userId}: ${result.error}`,
+        );
+      }
+    }
+
     if (state.whatsappOptIn && state.whatsappNumber) {
       const { sendText } = await import("../whatsapp/adapter");
       const result = await sendText(state.whatsappNumber, written.message);
@@ -227,6 +244,19 @@ export const markWhatsappDelivered = internalMutation({
     await ctx.db.patch(notificationId, {
       deliveredViaWhatsApp: true,
       whatsappMessageId: messageId,
+    });
+  },
+});
+
+export const markTelegramDelivered = internalMutation({
+  args: {
+    notificationId: v.id("notifications"),
+    messageId: v.string(),
+  },
+  handler: async (ctx, { notificationId, messageId }) => {
+    await ctx.db.patch(notificationId, {
+      deliveredViaTelegram: true,
+      telegramMessageId: messageId,
     });
   },
 });
@@ -293,6 +323,8 @@ export const buildUserState = internalQuery({
       lastBucketTimestamps,
       whatsappOptIn: profile.whatsappOptIn === true,
       whatsappNumber: profile.whatsappNumber,
+      telegramOptIn: profile.telegramOptIn === true,
+      telegramChatId: profile.telegramChatId,
     };
   },
 });
