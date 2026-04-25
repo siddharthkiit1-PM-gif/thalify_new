@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-25
 **Author:** Brainstormed with user via `superpowers:brainstorming`
-**Status:** Approved design — ready for implementation plan
+**Status:** ✅ Shipped 2026-04-25. The corresponding [implementation plan](../plans/2026-04-25-nudge-engine.md) was completed end-to-end and is live in production. One adjustment from the spec: WhatsApp delivery was deferred — Telegram became the primary push channel (free, no Meta paperwork). See the [README](../../../README.md) for current state.
 **Estimated effort:** ~5–7 days for full implementation including WhatsApp adapter
 
 ---
