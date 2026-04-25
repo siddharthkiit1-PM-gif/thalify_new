@@ -1,20 +1,25 @@
 /**
  * Inbound-message handlers for the Telegram bot.
  *
- * These are scheduled from the webhook so the HTTP response returns to
- * Telegram quickly (under their 60s timeout) while the AI work happens
- * out-of-band.
+ * Scheduled from the webhook so the HTTP response returns to Telegram
+ * inside the 60s budget while AI work happens out-of-band.
  *
- * - handleText  : routes a text message into the Health Buddy chat (Gemini)
- * - handlePhoto : downloads the photo from Telegram, runs the meal scanner,
- *                 auto-logs it as the time-appropriate meal, replies with
- *                 the breakdown
+ *   handleText      → Health Buddy text reply (Gemini)
+ *   handlePhoto     → meal scan + reply with [Log as breakfast/lunch/snack/dinner] [Skip] buttons
+ *   handleCallback  → button-tap router: log the scan / skip / etc.
  */
 import { internalAction } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
-import { sendText, sendChatAction, downloadFileAsBase64 } from "./adapter";
-import type { Id } from "../_generated/dataModel";
+import {
+  sendText,
+  sendChatAction,
+  downloadFileAsBase64,
+  editMessageText,
+  answerCallbackQuery,
+  type InlineKeyboardButton,
+} from "./adapter";
+import type { Id, Doc } from "../_generated/dataModel";
 
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 type ScanItem = { name: string; portion: string; cal: number; protein: number; carbs: number; fat: number };
@@ -32,8 +37,41 @@ function guessMealTypeFromIST(): MealType {
   return "dinner";
 }
 
+const MEAL_LABEL: Record<MealType, string> = {
+  breakfast: "Breakfast",
+  lunch: "Lunch",
+  snack: "Snack",
+  dinner: "Dinner",
+};
+
 const NOT_CONNECTED_REPLY =
   "I don't recognise this account yet. Open Thalify and tap 'Connect with Telegram' to link us — then I can answer questions and log your meals.";
+
+function summariseScan(items: ScanItem[], totalCal: number, totalProtein: number, suggestedMealType: MealType): string {
+  const lines = items.map(
+    (i) => `• ${i.name} (${i.portion}) — ${i.cal} cal · ${Math.round(i.protein)}g protein`,
+  );
+  return (
+    `I see this meal:\n\n${lines.join("\n")}\n\n` +
+    `Total: ${totalCal} cal · ${Math.round(totalProtein)}g protein\n\n` +
+    `Looks like ${MEAL_LABEL[suggestedMealType].toLowerCase()} based on the time. Tap to log:`
+  );
+}
+
+function scanButtons(scanResultId: string, suggestedMealType: MealType): InlineKeyboardButton[][] {
+  const others: MealType[] = (["breakfast", "lunch", "snack", "dinner"] as MealType[]).filter(
+    (m) => m !== suggestedMealType,
+  );
+  return [
+    [
+      { text: `✓ Log as ${MEAL_LABEL[suggestedMealType]}`, callback_data: `log:${scanResultId}:${suggestedMealType}` },
+      { text: "✗ Skip", callback_data: `skip:${scanResultId}` },
+    ],
+    others.map((m) => ({ text: MEAL_LABEL[m], callback_data: `log:${scanResultId}:${m}` })),
+  ];
+}
+
+// ── Text → Health Buddy ───────────────────────────────────────────────
 
 export const handleText = internalAction({
   args: { chatId: v.string(), text: v.string() },
@@ -46,9 +84,7 @@ export const handleText = internalAction({
       await sendText(chatId, NOT_CONNECTED_REPLY);
       return;
     }
-
     await sendChatAction(chatId, "typing");
-
     try {
       const reply: string = await ctx.runAction(internal.chat.chatAsUser, {
         userId: lookup.userId,
@@ -62,6 +98,8 @@ export const handleText = internalAction({
   },
 });
 
+// ── Photo → scan + present buttons (no auto-log) ──────────────────────
+
 export const handlePhoto = internalAction({
   args: { chatId: v.string(), fileId: v.string(), caption: v.optional(v.string()) },
   handler: async (ctx, { chatId, fileId, caption }) => {
@@ -73,29 +111,26 @@ export const handlePhoto = internalAction({
       await sendText(chatId, NOT_CONNECTED_REPLY);
       return;
     }
-
     await sendChatAction(chatId, "typing");
 
     const file = await downloadFileAsBase64(fileId);
     if (!file) {
-      await sendText(chatId, "Couldn't read that photo — try sending again, or attach as a regular photo (not a file).");
+      await sendText(chatId, "Couldn't read that photo — try sending again, or attach it as a regular photo (not a file).");
       return;
     }
 
-    const mealType = guessMealTypeFromIST();
-
     let result: {
+      scanResultId: string;
       items: ScanItem[];
       totalCal: number;
       totalProtein: number;
-      mealType?: string;
     };
     try {
       result = await ctx.runAction(internal.scan.scanMealAsUser, {
         userId: lookup.userId,
         imageBase64: file.base64,
         mediaType: file.mediaType,
-        autoLogAsMealType: mealType,
+        // No autoLogAsMealType — we want the user to confirm via buttons
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Couldn't scan that meal — try better lighting or a closer shot.";
@@ -103,15 +138,101 @@ export const handlePhoto = internalAction({
       return;
     }
 
-    const lines = result.items.map(
-      (i) => `• ${i.name} (${i.portion}) — ${i.cal} cal · ${Math.round(i.protein)}g protein`,
-    );
-    const summary =
-      `Logged as *${mealType}* ✓\n\n${lines.join("\n")}\n\n` +
-      `Total: *${result.totalCal} cal* · ${Math.round(result.totalProtein)}g protein\n\n` +
-      `${caption ? `(your note: "${caption}")\n\n` : ""}` +
-      `Want to fix anything? Open Thalify → today's meals → tap to edit. Or just send another photo.`;
+    const suggested = guessMealTypeFromIST();
+    const text = summariseScan(result.items, result.totalCal, result.totalProtein, suggested) +
+      (caption ? `\n\n(your note: "${caption}")` : "");
 
-    await sendText(chatId, summary);
+    await sendText(chatId, text, {
+      inlineKeyboard: scanButtons(result.scanResultId, suggested),
+    });
+  },
+});
+
+// ── Inline button tap router ──────────────────────────────────────────
+
+export const handleCallback = internalAction({
+  args: {
+    chatId: v.string(),
+    callbackQueryId: v.string(),
+    data: v.string(),
+    messageId: v.number(),
+  },
+  handler: async (ctx, { chatId, callbackQueryId, data, messageId }) => {
+    const lookup: { userId: Id<"users"> } | null = await ctx.runQuery(
+      internal.telegram.connect.getUserByChatId,
+      { chatId },
+    );
+    if (!lookup) {
+      await answerCallbackQuery(callbackQueryId, "Not connected.");
+      return;
+    }
+
+    const parts = data.split(":");
+    const action = parts[0];
+
+    if (action === "skip" && parts.length === 2) {
+      await answerCallbackQuery(callbackQueryId, "Skipped");
+      await editMessageText(chatId, messageId, "✗ Skipped — not logged.\n\nSend another photo anytime.");
+      return;
+    }
+
+    if (action === "log" && parts.length === 3) {
+      const scanResultId = parts[1] as Id<"scanResults">;
+      const mealType = parts[2] as MealType;
+      if (!["breakfast", "lunch", "snack", "dinner"].includes(mealType)) {
+        await answerCallbackQuery(callbackQueryId, "Invalid meal type");
+        return;
+      }
+
+      const scan: Doc<"scanResults"> | null = await ctx.runQuery(
+        internal.scan.getScanResultForUser,
+        { scanResultId, userId: lookup.userId },
+      );
+      if (!scan) {
+        await answerCallbackQuery(callbackQueryId, "Scan not found");
+        await editMessageText(chatId, messageId, "Hmm, I lost that scan. Send the photo again.");
+        return;
+      }
+
+      // Idempotency: if already consumed, just confirm and bail
+      if (scan.consumedAt) {
+        await answerCallbackQuery(callbackQueryId, "Already logged ✓");
+        return;
+      }
+
+      const today = new Date().toISOString().split("T")[0];
+      const mealLogId: Id<"mealLogs"> = await ctx.runMutation(internal.meals.logMealForUser, {
+        userId: lookup.userId,
+        date: today,
+        mealType,
+        items: scan.items.map((i) => ({
+          name: i.name,
+          portion: i.portion,
+          cal: i.cal,
+          protein: i.protein,
+          carbs: i.carbs,
+          fat: i.fat,
+        })),
+        totalCal: scan.totalCal,
+      });
+      await ctx.runMutation(internal.scan.markScanConsumed, {
+        scanResultId,
+        userId: lookup.userId,
+        mealLogId,
+      });
+
+      const lines = scan.items.map((i) => `• ${i.name} (${i.portion}) — ${i.cal} cal`);
+      await answerCallbackQuery(callbackQueryId, `Logged as ${MEAL_LABEL[mealType]} ✓`);
+      await editMessageText(
+        chatId,
+        messageId,
+        `✓ Logged as ${MEAL_LABEL[mealType]}\n\n${lines.join("\n")}\n\n` +
+          `Total: ${scan.totalCal} cal · ${Math.round(scan.totalProtein ?? 0)}g protein\n\n` +
+          `Send another photo to log more, or open Thalify to fine-tune portions.`,
+      );
+      return;
+    }
+
+    await answerCallbackQuery(callbackQueryId);
   },
 });

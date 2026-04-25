@@ -73,23 +73,35 @@ export async function downloadFileAsBase64(fileId: string): Promise<{
   return { base64, mediaType };
 }
 
+export type InlineKeyboardButton = { text: string; callback_data: string };
+export type SendOptions = {
+  inlineKeyboard?: InlineKeyboardButton[][];
+  parseMode?: "Markdown" | "HTML";
+};
+
 export async function sendText(
   chatId: string,
   text: string,
+  options: SendOptions = {},
 ): Promise<TelegramSendResult> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) return { success: false, error: "TELEGRAM_BOT_TOKEN missing" };
 
-  const url = `${TELEGRAM_API}/bot${token}/sendMessage`;
+  const body: Record<string, unknown> = {
+    chat_id: chatId,
+    text,
+    disable_web_page_preview: true,
+  };
+  if (options.parseMode) body.parse_mode = options.parseMode;
+  if (options.inlineKeyboard) {
+    body.reply_markup = { inline_keyboard: options.inlineKeyboard };
+  }
+
   try {
-    const resp = await fetch(url, {
+    const resp = await fetch(`${TELEGRAM_API}/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        disable_web_page_preview: true,
-      }),
+      body: JSON.stringify(body),
     });
     const data = (await resp.json()) as {
       ok: boolean;
@@ -102,5 +114,67 @@ export async function sendText(
     return { success: true, messageId: String(data.result?.message_id ?? "") };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/**
+ * Edit an existing message — used after a button tap to replace the
+ * scan summary with a confirmation, removing the inline keyboard.
+ */
+export async function editMessageText(
+  chatId: string,
+  messageId: number | string,
+  text: string,
+  options: SendOptions = {},
+): Promise<TelegramSendResult> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return { success: false, error: "TELEGRAM_BOT_TOKEN missing" };
+
+  const body: Record<string, unknown> = {
+    chat_id: chatId,
+    message_id: typeof messageId === "string" ? parseInt(messageId, 10) : messageId,
+    text,
+    disable_web_page_preview: true,
+  };
+  if (options.parseMode) body.parse_mode = options.parseMode;
+  if (options.inlineKeyboard !== undefined) {
+    body.reply_markup = { inline_keyboard: options.inlineKeyboard };
+  }
+
+  try {
+    const resp = await fetch(`${TELEGRAM_API}/bot${token}/editMessageText`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = (await resp.json()) as { ok: boolean; description?: string };
+    if (!resp.ok || !data.ok) {
+      return { success: false, error: data.description ?? `HTTP ${resp.status}` };
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/**
+ * Telegram requires a callback_query be acknowledged within ~30 seconds
+ * or the user sees a perpetual loading spinner on the button. Calling
+ * this with no text just clears the spinner.
+ */
+export async function answerCallbackQuery(
+  callbackQueryId: string,
+  text?: string,
+): Promise<void> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return;
+  try {
+    await fetch(`${TELEGRAM_API}/bot${token}/answerCallbackQuery`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ callback_query_id: callbackQueryId, text }),
+    });
+  } catch {
+    // best-effort
   }
 }

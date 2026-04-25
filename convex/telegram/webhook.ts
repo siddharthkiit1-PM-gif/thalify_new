@@ -41,6 +41,12 @@ type TelegramUpdate = {
     document?: { file_id: string; mime_type?: string };
     sticker?: { file_id: string };
   };
+  callback_query?: {
+    id: string;
+    from: { id: number };
+    message?: { chat: { id: number }; message_id: number };
+    data?: string;
+  };
 };
 
 export const inbound = httpAction(async (ctx, req) => {
@@ -53,6 +59,21 @@ export const inbound = httpAction(async (ctx, req) => {
   }
 
   const body = (await req.json()) as TelegramUpdate;
+
+  // Inline button tap → schedule the callback handler, return fast
+  if (body.callback_query) {
+    const cq = body.callback_query;
+    if (cq.message?.chat.id && cq.data) {
+      await ctx.scheduler.runAfter(0, internal.telegram.handlers.handleCallback, {
+        chatId: String(cq.message.chat.id),
+        callbackQueryId: cq.id,
+        data: cq.data,
+        messageId: cq.message.message_id,
+      });
+    }
+    return new Response("ok", { status: 200 });
+  }
+
   const message = body.message;
   if (!message) return new Response("ok", { status: 200 });
 
