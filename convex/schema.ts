@@ -42,7 +42,10 @@ export default defineSchema({
     telegramVerifiedAt: v.optional(v.number()),
     telegramConnectToken: v.optional(v.string()),
     telegramConnectExpiresAt: v.optional(v.number()),
-  }).index("by_userId", ["userId"]),
+    // Optional running thread the AI uses for short-context replies on Telegram
+    telegramLastInteractionAt: v.optional(v.number()),
+  }).index("by_userId", ["userId"])
+    .index("by_telegramChatId", ["telegramChatId"]),
 
   mealLogs: defineTable({
     userId: v.id("users"),

@@ -7,7 +7,7 @@
  * 4. webhook.ts calls completeConnect(token, chatId) which flips telegramOptIn=true
  * 5. Frontend's live useQuery sees the profile flip and shows "Connected ✓"
  */
-import { action, mutation, internalMutation } from "../_generated/server";
+import { action, mutation, internalMutation, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "../_generated/api";
@@ -91,9 +91,27 @@ export const completeConnect = internalMutation({
 export const handleStop = internalMutation({
   args: { chatId: v.string() },
   handler: async (ctx, { chatId }) => {
-    const profiles = await ctx.db.query("profiles").collect();
-    const match = profiles.find((p) => p.telegramChatId === chatId);
-    if (match) await ctx.db.patch(match._id, { telegramOptIn: false });
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_telegramChatId", (q) => q.eq("telegramChatId", chatId))
+      .unique();
+    if (profile) await ctx.db.patch(profile._id, { telegramOptIn: false });
+  },
+});
+
+/**
+ * Resolve a Telegram chat_id → Thalify userId via the by_telegramChatId index.
+ * Used by the inbound message handler to know who's chatting.
+ */
+export const getUserByChatId = internalQuery({
+  args: { chatId: v.string() },
+  handler: async (ctx, { chatId }) => {
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_telegramChatId", (q) => q.eq("telegramChatId", chatId))
+      .unique();
+    if (!profile || profile.telegramOptIn !== true) return null;
+    return { userId: profile.userId };
   },
 });
 
