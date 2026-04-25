@@ -17,6 +17,15 @@ import type { Doc, Id } from "../_generated/dataModel";
 
 const BATCH_SIZE = 50;
 
+// User-initiated events bypass quiet hours: if the user is actively logging
+// at 1 AM, they're awake and a real-time nudge is useful. Their phone's own
+// DND handles audible silence. Cron-initiated events still respect quiet
+// hours so we don't ping anyone at 3 AM with re-engagement prompts.
+const USER_INITIATED_EVENT_TYPES = new Set([
+  "meal_logged",
+  "scan_completed",
+]);
+
 export const processNudgeQueue = internalAction({
   args: {},
   handler: async (ctx) => {
@@ -73,10 +82,12 @@ export const processSingleEvent = internalAction({
       return;
     }
 
-    const hour = getISTHour();
-    if (isInQuietHours(hour)) {
-      await ctx.runMutation(internal.nudges.worker.skipEvent, { eventId, reason: "quiet" });
-      return;
+    if (!USER_INITIATED_EVENT_TYPES.has(event.type)) {
+      const hour = getISTHour();
+      if (isInQuietHours(hour)) {
+        await ctx.runMutation(internal.nudges.worker.skipEvent, { eventId, reason: "quiet" });
+        return;
+      }
     }
 
     type UserStateResult = {
