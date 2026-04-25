@@ -439,8 +439,11 @@ input, textarea { font-family: inherit; color: inherit; }
   }
 }
 
-/* ── Small phones (iPhone SE / mini / compact Android, ≤430px) ── */
-@media (max-width: 430px) {
+/* ── Small phones (≤440px) ─────────────────────────────────
+   Catches: every iPhone (SE, mini, 13/14/15/16, all Plus + Pro Max
+   models including the 16 Pro Max at 440), all OnePlus (7T → 12),
+   Pixel 7/8, Galaxy S/Note. */
+@media (max-width: 440px) {
   h1 { font-size: 26px !important; }
   h2.serif { font-size: 22px !important; }
   .page { padding: 14px 14px 56px !important; }
@@ -454,6 +457,20 @@ input, textarea { font-family: inherit; color: inherit; }
   .onboarding-card { padding: 24px 18px !important; }
   /* Scan upload zone — keep visual presence but lose extra padding */
   .scan-upload { padding: 36px 20px !important; }
+}
+
+/* ── Safe-area insets (notch / Dynamic Island / OnePlus camera hole) ──
+   Pairs with viewport-fit=cover in index.html. Honours iOS env() and
+   degrades cleanly on Android (the values are 0 there). */
+@supports (padding: env(safe-area-inset-top)) {
+  .nav, .nav-inner {
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
+  .page {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-bottom: max(56px, calc(56px + env(safe-area-inset-bottom)));
+  }
 }
 
 /* ── iPhone SE 1st-gen and similar (≤360px) ───────────────── */
