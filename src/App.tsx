@@ -9,6 +9,7 @@ import Chat from './pages/Chat'
 import Family from './pages/Family'
 import Lab from './pages/Lab'
 import Patterns from './pages/Patterns'
+import Upgrade from './pages/Upgrade'
 import Admin from './pages/Admin'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -52,6 +53,11 @@ export default function App() {
       <Route path="/patterns" element={
         <ProtectedRoute requireAuth requireOnboarding>
           <Patterns />
+        </ProtectedRoute>
+      } />
+      <Route path="/upgrade" element={
+        <ProtectedRoute requireAuth requireOnboarding>
+          <Upgrade />
         </ProtectedRoute>
       } />
       <Route path="/admin" element={
