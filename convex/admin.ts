@@ -203,6 +203,56 @@ export const unbindTelegramFromProfile = internalMutation({
 });
 
 /**
+ * One-shot fix for the two seed templates that had unfillable placeholders
+ * ({totalCal}, {recapNote}, {avgCal}). Replaces them with placeholder-free
+ * copy that reads cleanly even when the AI rewriter falls back.
+ *
+ * Idempotent — safe to re-run.
+ */
+export const fixLeakyTemplates = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const updates = [
+      {
+        variant: "dr-v1",
+        template: "{name}, day's a wrap. Tomorrow, lead with protein at breakfast — sets the tone.",
+      },
+      {
+        variant: "wr-v1",
+        template: "Week wrapped, {name}. Fresh sheet tomorrow. One small change: protein at breakfast every day this week.",
+      },
+    ];
+    let fixed = 0;
+    for (const u of updates) {
+      const existing = await ctx.db
+        .query("nudgeTemplates")
+        .filter((q) => q.eq(q.field("variant"), u.variant))
+        .collect();
+      for (const row of existing) {
+        await ctx.db.patch(row._id, { template: u.template });
+        fixed++;
+      }
+    }
+    return { fixed };
+  },
+});
+
+/**
+ * Delete notifications that have an unfilled {placeholder} in their
+ * message — these are AI-fallback failures that shouldn't have shipped.
+ * Returns how many were deleted.
+ */
+export const cleanupBrokenNotifications = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("notifications").collect();
+    const broken = all.filter((n) => /\{[a-zA-Z]\w*\}/.test(n.message));
+    for (const n of broken) await ctx.db.delete(n._id);
+    return { deleted: broken.length };
+  },
+});
+
+/**
  * Manually kick the worker once — useful right after revive.
  */
 export const runWorkerOnce = internalAction({
