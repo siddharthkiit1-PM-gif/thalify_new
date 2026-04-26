@@ -203,6 +203,49 @@ export const unbindTelegramFromProfile = internalMutation({
 });
 
 /**
+ * Mark a user as comp'd lifetime ("beta" reason — does NOT count toward
+ * the 50 founder cap). Use for admins, internal testers, and anyone you
+ * want to give unlimited access to without going through Razorpay.
+ *
+ * Usage:
+ *   CONVEX_DEPLOYMENT=prod:coordinated-corgi-211 \
+ *     npx convex run admin:grantBetaLifetime '{"email":"x@y.com"}'
+ */
+export const grantBetaLifetime = internalMutation({
+  args: { email: v.string() },
+  handler: async (ctx, { email }) => {
+    const normalized = email.toLowerCase().trim();
+    const user = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("email"), normalized))
+      .first();
+    if (!user) {
+      return { ok: false as const, reason: "no-user" as const, email: normalized };
+    }
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .unique();
+    if (!profile) {
+      return { ok: false as const, reason: "no-profile" as const, userId: user._id };
+    }
+    await ctx.db.patch(profile._id, {
+      plan: "lifetime",
+      lifetimeReason: "beta",
+      paidAt: profile.paidAt ?? Date.now(),
+      tokensUsedThisMonth: 0,
+      usageResetAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
+    });
+    return {
+      ok: true as const,
+      userId: user._id,
+      profileId: profile._id,
+      email: normalized,
+    };
+  },
+});
+
+/**
  * One-shot fix for the two seed templates that had unfillable placeholders
  * ({totalCal}, {recapNote}, {avgCal}). Replaces them with placeholder-free
  * copy that reads cleanly even when the AI rewriter falls back.

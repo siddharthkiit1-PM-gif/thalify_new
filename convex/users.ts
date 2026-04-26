@@ -86,6 +86,7 @@ export const getFounderSlotsRemaining = query({
 const ADMIN_EMAILS = new Set([
   "siddharth.kiit1@gmail.com",
   "agrawalsiddharth18@gmail.com",
+  "agrawalsiddharth66@gmail.com",
 ]);
 
 export const getCurrentUser = query({

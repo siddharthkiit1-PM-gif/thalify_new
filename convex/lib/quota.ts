@@ -16,6 +16,7 @@
 import type { Doc, Id } from "../_generated/dataModel";
 import type { GenericMutationCtx } from "convex/server";
 import type { DataModel } from "../_generated/dataModel";
+import { isUnlimitedUser } from "./tiers";
 
 export type ActionType = "scan" | "chat" | "lab" | "family" | "pattern";
 
@@ -80,6 +81,12 @@ export async function enforceUserQuota(
   opts: { enforce?: boolean } = {},
 ): Promise<void> {
   const enforce = opts.enforce ?? false;
+
+  // Admins / allowlisted unlimited users: bypass quota entirely.
+  // (They still hit the per-second/-minute rate limiter from rateLimit.ts —
+  // that protects against abuse, not paywall.)
+  const user = await ctx.db.get(userId);
+  if (isUnlimitedUser(user?.email ?? null)) return;
 
   const profile = await ctx.db
     .query("profiles")
