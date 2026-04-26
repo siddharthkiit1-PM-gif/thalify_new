@@ -39,8 +39,8 @@ const SEED_TEMPLATES: Seed[] = [
   { bucket: "prompt", trigger: "breakfast-skipped", variant: "bs-v2", template: "Skipping breakfast = bigger lunch + lower energy, {name}. 5 minutes for an idli or curd." },
 
   // Reflection (3)
-  { bucket: "reflection", trigger: "daily-recap", variant: "dr-v1", template: "{name}, you ended at {totalCal} today. {recapNote}." },
-  { bucket: "reflection", trigger: "weekly-recap", variant: "wr-v1", template: "Week wrapped, {name}. Average day was {avgCal} cal. Tomorrow's a fresh sheet." },
+  { bucket: "reflection", trigger: "daily-recap", variant: "dr-v1", template: "{name}, day's a wrap. Tomorrow, lead with protein at breakfast — sets the tone." },
+  { bucket: "reflection", trigger: "weekly-recap", variant: "wr-v1", template: "Week wrapped, {name}. Fresh sheet tomorrow. One small change: protein at breakfast every day this week." },
   { bucket: "reflection", trigger: "daily-recap", variant: "dr-v2", template: "Quiet day, {name}. Tomorrow's plan: protein-first breakfast." },
 
   // Plan (3)
