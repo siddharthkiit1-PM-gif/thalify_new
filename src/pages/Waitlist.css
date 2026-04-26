@@ -341,15 +341,270 @@ body { overflow-x: hidden; background: var(--cream); }
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ─────────────────────────────────────────────────────────────
+   Multi-channel logging section (App + Telegram side-by-side)
+   ───────────────────────────────────────────────────────────── */
+.multichannel {
+  padding: 80px 0 60px;
+  border-top: 1px solid var(--border);
+}
+.multichannel-head { max-width: 720px; margin-bottom: 44px; }
+.multichannel-head h2 {
+  font-family: var(--serif);
+  font-size: 46px;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  margin: 14px 0 14px;
+  line-height: 1.1;
+}
+.multichannel-head h2 em { font-style: italic; color: var(--sage-700); }
+.multichannel-sub {
+  color: var(--ink-2);
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0;
+}
+.multichannel-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: stretch;
+}
+.mc-card {
+  background: var(--sand);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 28px;
+  display: flex; flex-direction: column;
+  position: relative; overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.mc-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-card); }
+.mc-card-tg {
+  background: linear-gradient(135deg, #F5F8FA 0%, #E7F1F8 100%);
+  border-color: rgba(34, 166, 220, 0.2);
+}
+.mc-card-icon { font-size: 32px; line-height: 1; margin-bottom: 14px; }
+.mc-card-tag {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sage-700);
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.mc-card-tg .mc-card-tag { color: #1A8BB8; }
+.mc-card-title {
+  font-family: var(--serif);
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+.mc-card-title code {
+  font-family: var(--mono);
+  font-size: 14px;
+  background: rgba(34, 166, 220, 0.1);
+  color: #1A8BB8;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-weight: 600;
+}
+.mc-card-body {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  flex: 1;
+}
+.multichannel-foot {
+  margin-top: 28px;
+  padding: 16px 20px;
+  background: var(--sage-100);
+  border-left: 3px solid var(--sage-700);
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.multichannel-foot b { color: var(--ink); }
+
+/* ─────────────────────────────────────────────────────────────
+   What's next — roadmap grid
+   ───────────────────────────────────────────────────────────── */
+.whats-next {
+  padding: 80px 0 90px;
+  border-top: 1px solid var(--border);
+  background: var(--sand);
+  margin: 0 -1000px;
+  padding-left: 1000px;
+  padding-right: 1000px;
+  max-width: none;
+}
+.whats-next-head {
+  max-width: 720px;
+  margin: 0 auto 48px;
+  padding: 0 40px;
+}
+.whats-next-head h2 {
+  font-family: var(--serif);
+  font-size: 46px;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  margin: 14px 0 14px;
+  line-height: 1.1;
+}
+.whats-next-head h2 em { font-style: italic; color: var(--sage-700); }
+.whats-next-sub {
+  color: var(--ink-2);
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0;
+}
+.whats-next-grid {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 40px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.next-item {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px;
+  position: relative;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.next-item:hover { transform: translateY(-2px); box-shadow: var(--shadow-card); }
+.next-when {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sage-700);
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.next-title {
+  font-family: var(--serif);
+  font-size: 19px;
+  letter-spacing: -0.005em;
+  line-height: 1.25;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.next-body {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Tablet + phone (≤900px)
+   ───────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .hero { grid-template-columns: 1fr; }
+  .hero { grid-template-columns: 1fr; padding: 60px 0 40px; }
   .hero-headline { font-size: 52px; }
   .hero-visual { display: none; }
   .problem-grid { grid-template-columns: 1fr; }
   .pillars-grid { grid-template-columns: 1fr; }
-  .close-inner { grid-template-columns: 1fr; }
+  .close-inner { grid-template-columns: 1fr; gap: 36px; }
   .faq-grid { grid-template-columns: 1fr; }
-  .perks { grid-template-columns: 1fr; }
+  .perks { grid-template-columns: 1fr 1fr; }
   .wl-section { padding: 0 20px; }
   .waitlist-nav { padding: 0 20px; }
+  .multichannel-grid { grid-template-columns: 1fr; }
+  .whats-next-grid { grid-template-columns: 1fr 1fr; padding: 0 20px; }
+  .whats-next-head { padding: 0 20px; }
+  .problem h2 { font-size: 38px; }
+  .close-title { font-size: 40px; }
+  .multichannel-head h2 { font-size: 34px; }
+  .whats-next-head h2 { font-size: 34px; }
+  .manifesto-line { font-size: 28px; }
+  .pillars-head h2 { font-size: 32px !important; }
+  .faq-section h2 { font-size: 32px !important; }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Phone (≤640px)
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .launch-bar { font-size: 12px; padding: 9px 12px; line-height: 1.4; }
+  .waitlist-nav { height: 60px; }
+  .hero { padding: 36px 0 30px; }
+  .hero-eyebrow { font-size: 10.5px; gap: 8px; margin-bottom: 18px; }
+  .hero-eyebrow .line { width: 22px; }
+  .hero-headline { font-size: 42px; }
+  .hero-sub { font-size: 16px; margin-top: 22px; }
+  .hero-form-inline { flex-direction: column; gap: 10px; }
+  .hero-form-inline .hero-submit { width: 100%; justify-content: center; }
+  .hero-trust { flex-wrap: wrap; gap: 8px 12px; font-size: 11.5px; margin-top: 14px; }
+  .problem { padding: 56px 1000px; }
+  .problem-inner { padding: 0 20px; }
+  .problem h2 { font-size: 30px; margin: 12px 0 28px; }
+  .wrong-app, .right-app { padding: 22px; }
+  .manifesto { padding: 64px 20px 56px; }
+  .manifesto-line { font-size: 22px; padding: 8px 0; }
+  .pillars { padding: 48px 0 64px; }
+  .pillar-head { padding: 22px; }
+  .pillar-body { padding: 20px 22px 24px; }
+  .pillar-title { font-size: 22px !important; }
+  .pillar-num { font-size: 10px; }
+  .multichannel { padding: 56px 0 48px; }
+  .multichannel-head h2 { font-size: 28px; }
+  .multichannel-sub { font-size: 14.5px; }
+  .mc-card { padding: 22px; }
+  .mc-card-icon { font-size: 26px; }
+  .mc-card-title { font-size: 18px; }
+  .multichannel-foot { font-size: 13px; padding: 14px 16px; }
+  .close { padding: 56px 1000px; }
+  .close-inner { padding: 0 20px; gap: 28px; }
+  .close-title { font-size: 30px; }
+  .close-sub { font-size: 15px; margin-top: 16px; }
+  .perks { grid-template-columns: 1fr; gap: 10px; margin-top: 22px; }
+  .perk { padding: 14px; }
+  .perk-value { font-size: 15.5px; white-space: normal; }
+  .close-form { padding: 22px; }
+  .close-form-title { font-size: 20px; }
+  .whats-next { padding: 56px 1000px; }
+  .whats-next-head { padding: 0 20px; }
+  .whats-next-head h2 { font-size: 28px; }
+  .whats-next-sub { font-size: 14.5px; }
+  .whats-next-grid { grid-template-columns: 1fr; gap: 12px; padding: 0 20px; }
+  .next-item { padding: 18px; }
+  .next-title { font-size: 17px; }
+  .faq-section { padding: 56px 0; }
+  .faq-section h2 { font-size: 28px !important; }
+  .faq-q { font-size: 16.5px; }
+  .faq-grid { gap: 28px; margin-top: 32px; }
+  .footer { flex-direction: column; gap: 12px; align-items: flex-start; padding: 24px 0; }
+  .footer a { margin-left: 0; margin-right: 18px; }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Small phones (≤440px) — iPhone SE / OnePlus / Pixel
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 440px) {
+  .launch-bar { font-size: 11.5px; }
+  .channel-bar { font-size: 10.5px; padding: 6px 10px; gap: 6px; }
+  .waitlist-nav { padding: 0 16px; height: 56px; }
+  .nav-cta { gap: 10px; }
+  .hero { padding: 28px 0 24px; }
+  .hero-headline { font-size: 36px; line-height: 1.05; }
+  .hero-sub { font-size: 15px; }
+  .hero-form-inline { margin-top: 24px; }
+  .hero-submit { height: 50px; font-size: 14px; }
+  .problem h2 { font-size: 26px; }
+  .manifesto-line { font-size: 19px; padding: 6px 0; }
+  .manifesto { padding: 48px 16px 40px; }
+  .multichannel-head h2 { font-size: 24px; }
+  .close-title { font-size: 26px; }
+  .whats-next-head h2 { font-size: 24px; }
+  .faq-section h2 { font-size: 24px !important; }
+  .pillars-head h2 { font-size: 26px !important; }
+  .go-btn { height: 50px; font-size: 14.5px; }
+  .wl-section { padding: 0 16px; }
 }
