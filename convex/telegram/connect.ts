@@ -77,6 +77,24 @@ export const completeConnect = internalMutation({
     ) {
       return { ok: false, reason: "expired" as const };
     }
+
+    // One chat = one user. If anyone else already has this chatId bound
+    // (e.g. user created a second account and re-connected the same
+    // Telegram), unbind them so nudges don't fire twice to the same chat.
+    const others = await ctx.db
+      .query("profiles")
+      .withIndex("by_telegramChatId", (q) => q.eq("telegramChatId", chatId))
+      .collect();
+    for (const other of others) {
+      if (other._id !== match._id) {
+        await ctx.db.patch(other._id, {
+          telegramChatId: undefined,
+          telegramOptIn: false,
+          telegramVerifiedAt: undefined,
+        });
+      }
+    }
+
     await ctx.db.patch(match._id, {
       telegramChatId: chatId,
       telegramOptIn: true,

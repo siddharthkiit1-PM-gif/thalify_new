@@ -32,8 +32,33 @@ RULES:
 6. NEVER prescribe medication. NEVER mention lab values.
 7. Output ONLY the message text. No quotes, no preamble, no markdown.`;
 
+/**
+ * Used only when the AI rewriter fails (Gemini throttle, quota, network).
+ * Substitutes {name} with the user's first name. For any *other* unfilled
+ * placeholder ({avgCal}, {totalCal}, {recapNote}, etc.), strip the
+ * surrounding awkwardness so the user never sees raw braces.
+ *
+ *   "Average day was {avgCal} cal. Tomorrow's a fresh sheet."
+ *     → with raw replace would be: "Average day was {avgCal} cal..."
+ *     → we strip to: "Tomorrow's a fresh sheet."
+ *
+ * Sentences containing an unfilled placeholder get dropped entirely
+ * (cleaner than leaving "Average day was cal" half-readable).
+ */
 function fallback(template: string, name: string): string {
-  return template.replace(/\{name\}/g, name);
+  // 1. substitute {name}
+  let text = template.replace(/\{name\}/g, name);
+  // 2. drop any sentence that still has an unfilled {placeholder}
+  if (/\{[a-zA-Z]\w*\}/.test(text)) {
+    const sentences = text.split(/(?<=[.!?])\s+/);
+    const clean = sentences.filter((s) => !/\{[a-zA-Z]\w*\}/.test(s));
+    text = clean.join(" ").trim();
+  }
+  // 3. if everything got dropped, return a safe minimal nudge
+  if (text.length < 8) {
+    return `Quick check-in, ${name}. Open Thalify to see today's progress.`;
+  }
+  return text;
 }
 
 export async function writeNudge(ctx: WriterContext): Promise<WriterResult> {

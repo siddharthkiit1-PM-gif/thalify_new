@@ -170,6 +170,39 @@ export const reviveQuietSkippedEvents = internalMutation({
 });
 
 /**
+ * Find profiles sharing the same Telegram chatId. Used to clean up
+ * after the legacy completeConnect bug that allowed the same chat to
+ * be bound to multiple profiles. Returns a list — call
+ * `unbindTelegramFromProfile` for each duplicate you want to clear.
+ */
+export const findDuplicateTelegramConnections = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const profiles = await ctx.db.query("profiles").collect();
+    const byChat: Record<string, { profileId: string; userId: string }[]> = {};
+    for (const p of profiles) {
+      if (!p.telegramChatId) continue;
+      const list = (byChat[p.telegramChatId] = byChat[p.telegramChatId] ?? []);
+      list.push({ profileId: p._id, userId: p.userId });
+    }
+    const dupes = Object.entries(byChat).filter(([, list]) => list.length > 1);
+    return dupes.map(([chatId, list]) => ({ chatId, profiles: list }));
+  },
+});
+
+export const unbindTelegramFromProfile = internalMutation({
+  args: { profileId: v.id("profiles") },
+  handler: async (ctx, { profileId }) => {
+    await ctx.db.patch(profileId, {
+      telegramChatId: undefined,
+      telegramOptIn: false,
+      telegramVerifiedAt: undefined,
+    });
+    return { ok: true };
+  },
+});
+
+/**
  * Manually kick the worker once — useful right after revive.
  */
 export const runWorkerOnce = internalAction({
