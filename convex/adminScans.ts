@@ -2,9 +2,11 @@ import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
+// Keep in sync with the canonical list in convex/users.ts.
 const ADMIN_EMAILS = new Set([
   "siddharth.kiit1@gmail.com",
   "agrawalsiddharth18@gmail.com",
+  "agrawalsiddharth66@gmail.com",
 ]);
 
 async function requireAdmin(ctx: { auth: unknown; db: { get: (id: unknown) => Promise<{ email?: string } | null> } }): Promise<void> {
