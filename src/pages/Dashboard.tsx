@@ -8,6 +8,7 @@ import BodyStatsCard from '../components/BodyStatsCard'
 import NotificationBanner from '../components/NotificationBanner'
 import TelegramConnectModal from '../components/TelegramConnectModal'
 import TelegramLogo from '../components/TelegramLogo'
+import WeekStreakBar from '../components/WeekStreakBar'
 import { useIsMobile } from '../hooks/useIsMobile'
 
 function todayDate() { return new Date().toISOString().split('T')[0] }
@@ -30,6 +31,7 @@ export default function Dashboard() {
   const profile = useQuery(api.users.getProfile)
   const currentUser = useQuery(api.users.getCurrentUser)
   const todayLogs = useQuery(api.meals.getTodayLogs, { date: todayDate() })
+  const recentLogs = useQuery(api.meals.getRecentLogs)
 
   const totalCal = todayLogs?.reduce((acc, log) => acc + log.totalCal, 0) ?? 0
   const calorieGoal = profile?.calorieGoal ?? 1800
@@ -184,11 +186,7 @@ export default function Dashboard() {
         <div>
           <div style={{ background: 'var(--sand)', borderRadius: 18, padding: 20, marginBottom: 16 }}>
             <div className="label" style={{ marginBottom: 14 }}>This Week</div>
-            <div style={{ display: 'flex', gap: 6, justifyContent: 'space-between' }}>
-              {['M','T','W','T','F','S','S'].map((d, i) => (
-                <div key={i} style={{ width: 34, height: 34, borderRadius: 10, background: i < 3 ? 'var(--sage-700)' : 'var(--cream)', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 600, color: i < 3 ? 'white' : 'var(--muted)' }}>{d}</div>
-              ))}
-            </div>
+            <WeekStreakBar recentLogs={recentLogs as never} />
           </div>
           <div style={{ background: 'var(--sand)', borderRadius: 18, padding: 20, marginBottom: 16 }}>
             <div className="label" style={{ marginBottom: 10 }}>Your Goal</div>
