@@ -30,6 +30,13 @@ export const dailyActiveUsersInternal = internalQuery({
     const distinctScanUsers = new Set(recentScans.map((s) => s.userId));
 
     const totalUsers = await ctx.db.query("users").collect();
+    const allProfiles = await ctx.db.query("profiles").collect();
+    const paidUsers = allProfiles.filter((p) => p.plan === "lifetime").length;
+    const founderCounter = await ctx.db
+      .query("counters")
+      .withIndex("by_key", (q) => q.eq("key", "founders_paid"))
+      .unique();
+    const foundersFilled = founderCounter?.value ?? 0;
 
     return {
       date: today,
@@ -38,6 +45,10 @@ export const dailyActiveUsersInternal = internalQuery({
       distinctUsersWhoScannedToday: distinctScanUsers.size,
       totalScansToday: recentScans.length,
       totalUsersInDatabase: totalUsers.length,
+      paidUsers,
+      foundersFilled,
+      foundersTotal: 50,
+      foundersRemaining: Math.max(0, 50 - foundersFilled),
     };
   },
 });
@@ -73,6 +84,15 @@ export const dailyActiveUsers = query({
 
     const totalUsers = await ctx.db.query("users").collect();
 
+    // Paid (lifetime plan) user count + founder-slot status.
+    const allProfiles = await ctx.db.query("profiles").collect();
+    const paidUsers = allProfiles.filter((p) => p.plan === "lifetime").length;
+    const founderCounter = await ctx.db
+      .query("counters")
+      .withIndex("by_key", (q) => q.eq("key", "founders_paid"))
+      .unique();
+    const foundersFilled = founderCounter?.value ?? 0;
+
     return {
       date: today,
       distinctUsersWhoLoggedAMealToday: distinctLogUsers.size,
@@ -80,6 +100,10 @@ export const dailyActiveUsers = query({
       distinctUsersWhoScannedToday: distinctScanUsers.size,
       totalScansToday: recentScans.length,
       totalUsersInDatabase: totalUsers.length,
+      paidUsers,
+      foundersFilled,
+      foundersTotal: 50,
+      foundersRemaining: Math.max(0, 50 - foundersFilled),
     };
   },
 });
