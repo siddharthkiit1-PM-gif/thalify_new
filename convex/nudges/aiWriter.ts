@@ -8,6 +8,9 @@ export type WriterContext = {
   template: string;
   signal: SignalPrediction | null;
   lastMealName?: string;
+  food?: string;
+  weightKg?: number;
+  calorieGoal?: number;
 };
 
 export type WriterResult = {
@@ -45,9 +48,18 @@ RULES:
  * Sentences containing an unfilled placeholder get dropped entirely
  * (cleaner than leaving "Average day was cal" half-readable).
  */
-function fallback(template: string, name: string): string {
-  // 1. substitute {name}
+function fallback(
+  template: string,
+  name: string,
+  extras: { food?: string; weightKg?: number; calorieGoal?: number } = {},
+): string {
+  // 1. substitute known placeholders
   let text = template.replace(/\{name\}/g, name);
+  if (extras.food) text = text.replace(/\{food\}/g, extras.food);
+  if (extras.weightKg !== undefined)
+    text = text.replace(/\{weightKg\}/g, String(extras.weightKg));
+  if (extras.calorieGoal !== undefined)
+    text = text.replace(/\{calorieGoal\}/g, String(extras.calorieGoal));
   // 2. drop any sentence that still has an unfilled {placeholder}
   if (/\{[a-zA-Z]\w*\}/.test(text)) {
     const sentences = text.split(/(?<=[.!?])\s+/);
@@ -69,10 +81,19 @@ Context:
 - Name: ${ctx.name}
 - Goal: ${ctx.goal}
 - Trigger: ${ctx.trigger}
+${ctx.weightKg ? `- Current weight: ${ctx.weightKg} kg` : ""}
+${ctx.calorieGoal ? `- Daily calorie goal: ${ctx.calorieGoal} kcal` : ""}
 ${ctx.lastMealName ? `- Last meal: ${ctx.lastMealName}` : ""}
+${ctx.food ? `- Repeated food: ${ctx.food}` : ""}
 ${ctx.signal ? `- Predicted impact: ${ctx.signal.context}, ~${ctx.signal.kg30Days.toFixed(1)} kg over 30 days` : ""}
 
 Output: just the rewritten line.`;
+
+  const extras = {
+    food: ctx.food,
+    weightKg: ctx.weightKg,
+    calorieGoal: ctx.calorieGoal,
+  };
 
   try {
     const text = await generateText({
@@ -82,7 +103,7 @@ Output: just the rewritten line.`;
     });
     const cleaned = text.trim().replace(/^["']|["']$/g, "");
     if (!cleaned) {
-      return { message: fallback(ctx.template, ctx.name), aiFallback: true };
+      return { message: fallback(ctx.template, ctx.name, extras), aiFallback: true };
     }
     return { message: cleaned, aiFallback: false };
   } catch (err) {
@@ -92,7 +113,7 @@ Output: just the rewritten line.`;
       classified.code === "quota" ||
       classified.code === "network"
     ) {
-      return { message: fallback(ctx.template, ctx.name), aiFallback: true };
+      return { message: fallback(ctx.template, ctx.name, extras), aiFallback: true };
     }
     throw err;
   }

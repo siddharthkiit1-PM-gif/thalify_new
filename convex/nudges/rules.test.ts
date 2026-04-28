@@ -74,4 +74,33 @@ describe("matchTrigger", () => {
       bucket: "prompt",
     });
   });
+
+  it("daily_log_prompt with no meals today → prompt/daily-log-prompt", () => {
+    const event = mockEvent("daily_log_prompt");
+    const state = mockUserState({
+      mealCountToday: 0,
+      hasBreakfastToday: false,
+      hasLunchToday: false,
+      hasDinnerToday: false,
+    });
+    expect(matchTrigger(event, state)).toEqual({
+      trigger: "daily-log-prompt",
+      bucket: "prompt",
+    });
+  });
+
+  it("daily_log_prompt with at least one meal today → null", () => {
+    const event = mockEvent("daily_log_prompt");
+    const state = mockUserState({ mealCountToday: 1 });
+    expect(matchTrigger(event, state)).toBeNull();
+  });
+
+  it("food_repetition_detected → prompt/food-repetition", () => {
+    const event = mockEvent("food_repetition_detected", { foodName: "paratha" });
+    const state = mockUserState();
+    expect(matchTrigger(event, state)).toEqual({
+      trigger: "food-repetition",
+      bucket: "prompt",
+    });
+  });
 });

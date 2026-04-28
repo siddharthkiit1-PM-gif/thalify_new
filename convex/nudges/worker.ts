@@ -170,6 +170,7 @@ export const processSingleEvent = internalAction({
     }
 
     const lastMealName = (event.payload?.mealName as string | undefined) ?? undefined;
+    const repeatedFood = (event.payload?.foodName as string | undefined) ?? undefined;
     const written = await writeNudge({
       name: state.name,
       goal: state.goal,
@@ -177,6 +178,9 @@ export const processSingleEvent = internalAction({
       template: template.template,
       signal,
       lastMealName,
+      food: repeatedFood,
+      weightKg: state.weightKg,
+      calorieGoal: state.calorieGoal,
     });
 
     let expiresAt: number | undefined;

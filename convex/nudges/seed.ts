@@ -38,6 +38,23 @@ const SEED_TEMPLATES: Seed[] = [
   { bucket: "prompt", trigger: "re-engagement", variant: "re-v1", template: "Been a couple days, {name}. One scan brings you back into rhythm." },
   { bucket: "prompt", trigger: "breakfast-skipped", variant: "bs-v2", template: "Skipping breakfast = bigger lunch + lower energy, {name}. 5 minutes for an idli or curd." },
 
+  // Re-engagement after 3+ days of silence — weight/goal-aware variants
+  { bucket: "prompt", trigger: "re-engagement", variant: "re-v2", template: "{name}, 3 days off the radar. At {weightKg} kg, one logged meal today keeps the trend honest — even just a chai counts." },
+  { bucket: "prompt", trigger: "re-engagement", variant: "re-v3", template: "Coming back in is the hardest part, {name}. Open Thalify, snap your next meal, done in 20 seconds." },
+  { bucket: "prompt", trigger: "re-engagement", variant: "re-v4", template: "{name}, your {calorieGoal} cal/day plan is waiting. Skip the guilt — log whatever you ate today, even roughly." },
+  { bucket: "prompt", trigger: "re-engagement", variant: "re-v5", template: "Quiet week, {name}? The data only helps when it's there. One photo brings it all back." },
+
+  // Daily log prompt — once a day, only fires if user hasn't logged anything today
+  { bucket: "prompt", trigger: "daily-log-prompt", variant: "dlp-v1", template: "{name}, haven't seen a meal logged today. Snap a photo if you can — or just type what you remember. Both work." },
+  { bucket: "prompt", trigger: "daily-log-prompt", variant: "dlp-v2", template: "Quick one, {name} — log today's meals before the day blurs. Photo or text, your call." },
+  { bucket: "prompt", trigger: "daily-log-prompt", variant: "dlp-v3", template: "{name}, 30 seconds: photo of dinner, or type out what you ate. Your future self loves consistency." },
+
+  // Food repetition — fires when same food appears in 4+ of last 7 days
+  { bucket: "prompt", trigger: "food-repetition", variant: "fr-v1", template: "{name}, you've had {food} 4+ days this week. Bored or busy? One swap — say sprouts or paneer bhurji — keeps the protein interesting." },
+  { bucket: "prompt", trigger: "food-repetition", variant: "fr-v2", template: "Routine's a strength, {name}, but {food} shows up a lot lately. Try mixing in a different sabzi tomorrow — your gut will notice." },
+  { bucket: "prompt", trigger: "food-repetition", variant: "fr-v3", template: "{name}, {food} is your default this week. Worth a small change-up: dal-chawal one day, khichdi another, keeps micronutrients varied." },
+  { bucket: "prompt", trigger: "food-repetition", variant: "fr-v4", template: "Heads up, {name} — {food} repeating most days. Same calories, more variety, better long-term. One swap this week is enough." },
+
   // Reflection (3)
   { bucket: "reflection", trigger: "daily-recap", variant: "dr-v1", template: "{name}, day's a wrap. Tomorrow, lead with protein at breakfast — sets the tone." },
   { bucket: "reflection", trigger: "weekly-recap", variant: "wr-v1", template: "Week wrapped, {name}. Fresh sheet tomorrow. One small change: protein at breakfast every day this week." },
@@ -52,11 +69,14 @@ const SEED_TEMPLATES: Seed[] = [
 export const seedTemplates = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const existing = await ctx.db.query("nudgeTemplates").first();
-    if (existing) return { skipped: true, reason: "already-seeded" };
+    // Idempotent: insert only templates whose `variant` doesn't already exist.
+    // Lets us add new variants over time without wiping the existing ones.
+    const existing = await ctx.db.query("nudgeTemplates").collect();
+    const existingVariants = new Set(existing.map((t) => t.variant));
 
     let inserted = 0;
     for (const t of SEED_TEMPLATES) {
+      if (existingVariants.has(t.variant)) continue;
       await ctx.db.insert("nudgeTemplates", {
         bucket: t.bucket as never,
         trigger: t.trigger,
@@ -68,6 +88,6 @@ export const seedTemplates = internalMutation({
       });
       inserted++;
     }
-    return { inserted };
+    return { inserted, skipped: existing.length };
   },
 });

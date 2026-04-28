@@ -48,7 +48,8 @@ export type MockEvent = {
   type:
     | "meal_logged" | "scan_completed"
     | "time_breakfast_check" | "time_lunch_check" | "time_dinner_check"
-    | "time_daily_summary" | "streak_milestone" | "gap_detected" | "weekly_insight";
+    | "time_daily_summary" | "streak_milestone" | "gap_detected" | "weekly_insight"
+    | "daily_log_prompt" | "food_repetition_detected";
   payload?: Record<string, unknown>;
   createdAt: number;
 };
