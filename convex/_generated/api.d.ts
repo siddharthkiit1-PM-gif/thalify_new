@@ -39,6 +39,7 @@ import type * as nudges_signalSeeders from "../nudges/signalSeeders.js";
 import type * as nudges_templatePicker from "../nudges/templatePicker.js";
 import type * as nudges_timeSeeders from "../nudges/timeSeeders.js";
 import type * as nudges_worker from "../nudges/worker.js";
+import type * as passwordHistory from "../passwordHistory.js";
 import type * as passwordReset from "../passwordReset.js";
 import type * as patterns from "../patterns.js";
 import type * as razorpay_adapter from "../razorpay/adapter.js";
@@ -96,6 +97,7 @@ declare const fullApi: ApiFromModules<{
   "nudges/templatePicker": typeof nudges_templatePicker;
   "nudges/timeSeeders": typeof nudges_timeSeeders;
   "nudges/worker": typeof nudges_worker;
+  passwordHistory: typeof passwordHistory;
   passwordReset: typeof passwordReset;
   patterns: typeof patterns;
   "razorpay/adapter": typeof razorpay_adapter;

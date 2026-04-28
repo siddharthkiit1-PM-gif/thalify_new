@@ -2,6 +2,13 @@ import { convexAuth } from "@convex-dev/auth/server";
 import { Password } from "@convex-dev/auth/providers/Password";
 import { ThalifyPasswordReset } from "./passwordReset";
 
+// Session lifetimes:
+//   totalDurationMs    — absolute max (logout after this regardless of activity)
+//   inactiveDurationMs — sliding window (logout after this of no use; refreshes on activity)
+// Both 10 days — explicit choice. Long enough that returning users don't keep
+// re-logging in, short enough that an idle device logs out in reasonable time.
+const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
+
 export const { auth, signIn, signOut, store } = convexAuth({
   providers: [
     Password({
@@ -17,4 +24,8 @@ export const { auth, signIn, signOut, store } = convexAuth({
       },
     }),
   ],
+  session: {
+    totalDurationMs: TEN_DAYS_MS,
+    inactiveDurationMs: TEN_DAYS_MS,
+  },
 });

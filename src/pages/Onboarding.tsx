@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMutation } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 
 type Goal = 'lose' | 'maintain' | 'diabetes' | 'gain'
@@ -13,6 +13,8 @@ const STEPS = 3
 export default function Onboarding() {
   const navigate = useNavigate()
   const createProfile = useMutation(api.users.createProfile)
+  const currentUser = useQuery(api.users.getCurrentUser)
+  const firstName = (currentUser?.name?.split(/\s+/)[0]) || ''
 
   const [step, setStep] = useState(1)
   const [goal, setGoal] = useState<Goal | null>(null)
@@ -55,9 +57,11 @@ export default function Onboarding() {
         {step === 1 && (
           <div className="fade-in">
             <div data-eyebrow style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 14 }}>
-              Step 1 of 3 · The goal
+              {firstName ? `Welcome, ${firstName}` : 'Welcome'} · Step 1 of 3
             </div>
-            <h2 className="serif" style={{ fontSize: 36, marginBottom: 10, lineHeight: 1.15, letterSpacing: '-0.015em' }}>What are we working toward?</h2>
+            <h2 className="serif" style={{ fontSize: 36, marginBottom: 10, lineHeight: 1.15, letterSpacing: '-0.015em' }}>
+              {firstName ? `${firstName}, what are we working toward?` : 'What are we working toward?'}
+            </h2>
             <p style={{ color: 'var(--ink-2)', marginBottom: 28, lineHeight: 1.55 }}>We'll set your calorie target and tailor every food suggestion around it.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {([

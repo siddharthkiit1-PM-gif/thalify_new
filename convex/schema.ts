@@ -284,4 +284,14 @@ export default defineSchema({
   }).index("by_userId_createdAt", ["userId", "createdAt"])
     .index("by_userId_bucket_createdAt", ["userId", "bucket", "createdAt"])
     .index("by_variant_createdAt", ["variant", "createdAt"]),
+
+  // Last-N password hashes per user, used to block reusing a recent password
+  // during reset. Independent of the auth library's own password store —
+  // this is just a salted SHA-256 of the plaintext, kept for comparison.
+  passwordHistory: defineTable({
+    userId: v.id("users"),
+    hash: v.string(),
+    salt: v.string(),
+    createdAt: v.number(),
+  }).index("by_userId_createdAt", ["userId", "createdAt"]),
 });
