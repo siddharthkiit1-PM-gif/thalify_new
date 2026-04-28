@@ -80,6 +80,9 @@ export function matchTrigger(event: MockEvent, state: MockUserState): TriggerMat
     case "food_repetition_detected":
       return { trigger: "food-repetition", bucket: "prompt" };
 
+    case "upgrade_prompt":
+      return { trigger: "upgrade-prompt", bucket: "plan" };
+
     case "weekly_insight":
       return { trigger: "weekly-recap", bucket: "reflection" };
 

@@ -64,6 +64,14 @@ const SEED_TEMPLATES: Seed[] = [
   { bucket: "plan", trigger: "tomorrow-plan", variant: "tp-v1", template: "{name}, tomorrow's plan: dal + roti + sabzi at lunch. Keeps you under your target without feeling deprived." },
   { bucket: "plan", trigger: "weekend-plan", variant: "wp-v1", template: "Weekend, {name} — eat well, walk more. One indulgent meal is fine; just log it." },
   { bucket: "plan", trigger: "post-doctor-plan", variant: "pdp-v1", template: "After your doctor visit, {name}, focus on consistency over perfection. One meal at a time." },
+
+  // Upgrade prompt — only fires for free users who've logged 3+ days, with a
+  // 7-day cooldown. Templates carry the /upgrade link so Telegram users can
+  // tap straight to checkout.
+  { bucket: "plan", trigger: "upgrade-prompt", variant: "up-v1", template: "{name}, you've been showing up — that's the hard part. Founder spot is ₹99 once, lifetime: https://thalify.vercel.app/upgrade" },
+  { bucket: "plan", trigger: "upgrade-prompt", variant: "up-v2", template: "Quick one, {name} — first 50 Founders get lifetime access for ₹99 (cheaper than 1 month of most apps). thalify.vercel.app/upgrade" },
+  { bucket: "plan", trigger: "upgrade-prompt", variant: "up-v3", template: "{name}, your habit's forming. Lock it in: ₹99 once = lifetime AI scans + unlimited chat. thalify.vercel.app/upgrade" },
+  { bucket: "plan", trigger: "upgrade-prompt", variant: "up-v4", template: "Worth flagging, {name}: Founder pricing (₹99 once, lifetime) ends at 50 customers. You qualify — thalify.vercel.app/upgrade" },
 ];
 
 export const seedTemplates = internalMutation({

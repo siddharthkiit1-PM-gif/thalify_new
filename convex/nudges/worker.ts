@@ -9,6 +9,7 @@ import {
   isInQuietHours,
   isStale,
   getISTHour,
+  frequencyCapForPlan,
 } from "./gatekeepers";
 import { pickTemplate } from "./templatePicker";
 import { writeNudge } from "./aiWriter";
@@ -96,6 +97,7 @@ export const processSingleEvent = internalAction({
       goal: "lose" | "maintain" | "diabetes" | "gain";
       dietType: "veg" | "veg_eggs" | "nonveg" | "jain" | "vegan";
       calorieGoal: number;
+      plan?: "free" | "lifetime";
       weightKg?: number;
       heightCm?: number;
       age?: number;
@@ -137,7 +139,8 @@ export const processSingleEvent = internalAction({
       return;
     }
 
-    if (!withinFrequencyCap(state.notifsLast24h)) {
+    const cap = frequencyCapForPlan(state.plan);
+    if (!withinFrequencyCap(state.notifsLast24h, cap)) {
       await ctx.runMutation(internal.nudges.worker.skipEvent, { eventId, reason: "cap" });
       return;
     }
@@ -326,6 +329,7 @@ export const buildUserState = internalQuery({
       goal: profile.goal,
       dietType: profile.dietType,
       calorieGoal: profile.calorieGoal,
+      plan: profile.plan ?? "free",
       weightKg: profile.weightKg,
       heightCm: profile.heightCm,
       age: profile.age,

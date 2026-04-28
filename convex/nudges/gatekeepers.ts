@@ -1,12 +1,21 @@
-const FREQ_CAP_PER_DAY = 5;
+const FREQ_CAP_PER_DAY_LIFETIME = 5;
+const FREQ_CAP_PER_DAY_FREE = 1;
 const BUCKET_DEDUP_HOURS = 12;
 const QUIET_HOUR_START = 0;
 const QUIET_HOUR_END = 7;
 const STALE_HOURS = 4;
 
+/**
+ * Free users get one nudge per 24h — premium signal stays scarce. Lifetime
+ * (paid) users get the full 5/day allowance. Unknown plan is treated as free.
+ */
+export function frequencyCapForPlan(plan: string | undefined): number {
+  return plan === "lifetime" ? FREQ_CAP_PER_DAY_LIFETIME : FREQ_CAP_PER_DAY_FREE;
+}
+
 export function withinFrequencyCap(
   notificationsLast24h: number,
-  cap = FREQ_CAP_PER_DAY,
+  cap = FREQ_CAP_PER_DAY_LIFETIME,
 ): boolean {
   return notificationsLast24h < cap;
 }
