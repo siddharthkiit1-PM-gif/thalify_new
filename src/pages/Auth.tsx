@@ -5,7 +5,7 @@ import { useConvexAuth, useQuery, useAction } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 
 type Tab = 'login' | 'register'
-type View = 'form' | 'signupSuccess' | 'forgotRequest' | 'forgotReset'
+type View = 'form' | 'forgotRequest' | 'forgotReset'
 
 export default function Auth() {
   const navigate = useNavigate()
@@ -16,8 +16,10 @@ export default function Auth() {
   const resetCodeFromUrl = searchParams.get('code') ?? ''
   const isResetMode = searchParams.get('mode') === 'reset'
 
-  const { signIn, signOut } = useAuthActions()
+  const { signIn } = useAuthActions()
   const sendSignupWelcome = useAction(api.accountEmails.sendSignupWelcome)
+  const checkPasswordReuse = useAction(api.passwordHistory.checkPasswordReuse)
+  const recordPasswordChange = useAction(api.passwordHistory.recordPasswordChange)
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth()
   const profile = useQuery(api.users.getProfile)
 
@@ -31,13 +33,9 @@ export default function Auth() {
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [submitted, setSubmitted] = useState(false)
-  const [createdEmail, setCreatedEmail] = useState('')
-  const [createdName, setCreatedName] = useState('')
 
   useEffect(() => {
-    if (view === 'signupSuccess') return
     if (!submitted) return
-    if (tab === 'register' && view === 'form') return
     if (authLoading) return
     if (!isAuthenticated) return
     if (profile === undefined) return
@@ -46,7 +44,7 @@ export default function Auth() {
     } else {
       navigate('/dashboard', { replace: true })
     }
-  }, [view, submitted, tab, authLoading, isAuthenticated, profile, navigate])
+  }, [submitted, authLoading, isAuthenticated, profile, navigate])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -60,19 +58,16 @@ export default function Auth() {
     try {
       if (tab === 'register') {
         await signIn('password', { name: trimmedName, email: normalizedEmail, password, flow: 'signUp' })
-        // Must await before signOut — the action checks auth server-side,
-        // and signOut invalidates the session before the server can process it.
-        try {
-          await sendSignupWelcome({ email: normalizedEmail, name: trimmedName })
-        } catch (err) {
+        // User is now authenticated. Send welcome email in the background —
+        // failure shouldn't block the onboarding flow.
+        sendSignupWelcome({ email: normalizedEmail, name: trimmedName }).catch(err => {
           console.error('Signup welcome email failed:', err)
-        }
-        setCreatedEmail(normalizedEmail)
-        setCreatedName(trimmedName)
-        try { await signOut() } catch { /* ignore */ }
-        setPassword('')
-        setView('signupSuccess')
-        setSubmitted(false)
+        })
+        // Record this password as the first entry in the user's history.
+        recordPasswordChange({ newPassword: password }).catch(err => {
+          console.error('passwordHistory: failed to record initial password:', err)
+        })
+        // useEffect at top sees isAuthenticated + no profile → redirects to /onboarding.
       } else {
         await signIn('password', { email: normalizedEmail, password, flow: 'signIn' })
       }
@@ -123,7 +118,19 @@ export default function Auth() {
     if (newPassword.length < 8) { setError('New password must be at least 8 characters'); return }
     setSubmitted(true)
     try {
+      // Block reuse of any of the user's last 5 passwords. Done BEFORE the
+      // reset flow so the bad password never reaches the password store.
+      const reuse = await checkPasswordReuse({ email: normalizedEmail, newPassword })
+      if (reuse.reused) {
+        setError("That's one of your last 5 passwords. Please pick a new one.")
+        setSubmitted(false)
+        return
+      }
       await signIn('password', { email: normalizedEmail, code, newPassword, flow: 'reset-verification' })
+      // Reset succeeded — append to history (user is now authenticated).
+      recordPasswordChange({ newPassword }).catch(err => {
+        console.error('passwordHistory: failed to record new password:', err)
+      })
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       setError(msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('code') ? 'Invalid or expired code. Please request a new one.' : (msg || 'Could not reset password'))
@@ -131,40 +138,7 @@ export default function Auth() {
     }
   }
 
-  function goToSignIn() {
-    window.location.href = `/auth?email=${encodeURIComponent(createdEmail)}&mode=login`
-  }
-
   const showLoading = submitted && !error && !info
-
-  // Signup success screen
-  if (view === 'signupSuccess') {
-    const firstName = createdName.split(/\s+/)[0] || 'there'
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--cream)', padding: 20 }}>
-        <div className="auth-card" style={{ width: '100%', maxWidth: 440, background: 'var(--sand)', borderRadius: 20, border: '1px solid var(--border)', textAlign: 'center' }}>
-          <div className="brand" style={{ marginBottom: 24, justifyContent: 'center' }}>
-            <div className="brand-mark">Th</div>
-            <span style={{ fontSize: 18, fontWeight: 600 }}>Thalify</span>
-          </div>
-          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--sage-100, #EEF7EC)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 32 }}>✓</div>
-          <h1 className="serif" style={{ fontSize: 26, marginBottom: 10, lineHeight: 1.3 }}>
-            Welcome to Thalify, {firstName}!
-          </h1>
-          <p style={{ fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.6, marginBottom: 20 }}>
-            Your account is created. We've sent a welcome email to<br />
-            <b style={{ color: 'var(--ink)' }}>{createdEmail}</b>
-          </p>
-          <div style={{ background: 'var(--cream)', borderRadius: 12, padding: '14px 16px', marginBottom: 24, textAlign: 'left' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--sage-700)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>📧 Check your inbox</div>
-            <div style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>Look for "Welcome to Thalify". Also check your spam folder.</div>
-          </div>
-          <button onClick={goToSignIn} className="btn btn-primary" style={{ width: '100%', marginBottom: 12 }}>Sign in to continue →</button>
-          <div style={{ fontSize: 12, color: 'var(--muted)' }}>Use the password you just set.</div>
-        </div>
-      </div>
-    )
-  }
 
   // Shell wrapper for the remaining views
   const wrapper = (content: React.ReactNode) => (

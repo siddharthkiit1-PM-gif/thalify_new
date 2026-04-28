@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthActions } from '@convex-dev/auth/react'
-import { useQuery, useMutation } from 'convex/react'
+import { useConvexAuth, useQuery, useMutation } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import { useIsMobile } from '../hooks/useIsMobile'
 import NotificationBell from './NotificationBell'
@@ -21,6 +21,7 @@ export default function Navbar() {
   const current = location.pathname.replace('/', '')
   const isMobile = useIsMobile()
   const { signOut } = useAuthActions()
+  const { isAuthenticated } = useConvexAuth()
   const currentUser = useQuery(api.users.getCurrentUser)
   const profile = useQuery(api.users.getProfile)
   const setPhotoStorage = useMutation(api.users.setPhotoStoragePreference)
@@ -67,7 +68,7 @@ export default function Navbar() {
   return (
     <div className="nav">
       <div className="nav-inner">
-        <div className="brand" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+        <div className="brand" onClick={() => navigate(isAuthenticated ? '/dashboard' : '/')} style={{ cursor: 'pointer' }}>
           <div className="brand-mark">Th</div>
           <span>Thalify</span>
         </div>
