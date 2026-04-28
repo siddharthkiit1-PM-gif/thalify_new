@@ -1,6 +1,89 @@
-import { internalMutation, internalAction } from "./_generated/server";
+import { internalMutation, internalAction, internalQuery, query } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { getAuthUserId } from "@convex-dev/auth/server";
+
+/** Single-email admin gate for personal-stats endpoints. */
+const PERSONAL_ADMIN_EMAIL = "agrawalsiddharth66@gmail.com";
+
+/**
+ * Personal-admin daily stats. CLI-callable bypassing auth.
+ *
+ * Call via: npx convex run admin:dailyActiveUsersInternal --prod
+ */
+export const dailyActiveUsersInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const today = new Date().toISOString().split("T")[0];
+
+    const todayLogs = await ctx.db
+      .query("mealLogs")
+      .filter((q) => q.eq(q.field("date"), today))
+      .collect();
+    const distinctLogUsers = new Set(todayLogs.map((l) => l.userId));
+
+    const startOfTodayMs = new Date(today + "T00:00:00.000Z").getTime();
+    const recentScans = await ctx.db
+      .query("scanResults")
+      .withIndex("by_createdAt", (q) => q.gt("createdAt", startOfTodayMs))
+      .collect();
+    const distinctScanUsers = new Set(recentScans.map((s) => s.userId));
+
+    const totalUsers = await ctx.db.query("users").collect();
+
+    return {
+      date: today,
+      distinctUsersWhoLoggedAMealToday: distinctLogUsers.size,
+      totalMealLogsToday: todayLogs.length,
+      distinctUsersWhoScannedToday: distinctScanUsers.size,
+      totalScansToday: recentScans.length,
+      totalUsersInDatabase: totalUsers.length,
+    };
+  },
+});
+
+/**
+ * Public-query version of the same stats. Returns null for any caller
+ * whose authenticated email isn't agrawalsiddharth66@gmail.com — so the
+ * UI can render an admin-only widget without leaking counts to anyone
+ * else, even if they reverse-engineer the function name.
+ */
+export const dailyActiveUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const user = await ctx.db.get(userId);
+    if (!user || user.email !== PERSONAL_ADMIN_EMAIL) return null;
+
+    const today = new Date().toISOString().split("T")[0];
+
+    const todayLogs = await ctx.db
+      .query("mealLogs")
+      .filter((q) => q.eq(q.field("date"), today))
+      .collect();
+    const distinctLogUsers = new Set(todayLogs.map((l) => l.userId));
+
+    const startOfTodayMs = new Date(today + "T00:00:00.000Z").getTime();
+    const recentScans = await ctx.db
+      .query("scanResults")
+      .withIndex("by_createdAt", (q) => q.gt("createdAt", startOfTodayMs))
+      .collect();
+    const distinctScanUsers = new Set(recentScans.map((s) => s.userId));
+
+    const totalUsers = await ctx.db.query("users").collect();
+
+    return {
+      date: today,
+      distinctUsersWhoLoggedAMealToday: distinctLogUsers.size,
+      totalMealLogsToday: todayLogs.length,
+      distinctUsersWhoScannedToday: distinctScanUsers.size,
+      totalScansToday: recentScans.length,
+      totalUsersInDatabase: totalUsers.length,
+    };
+  },
+});
+
 
 /**
  * Admin cleanup: fully remove a user and all auth/profile records by email.
