@@ -2,7 +2,7 @@ import { action, internalAction, internalMutation, internalQuery } from "./_gene
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
-import { generateFromImage, extractJson, classifyError, AiError } from "./ai/claude";
+import { generateFromImage, generateText, extractJson, classifyError, AiError } from "./ai/claude";
 import { checkRateLimit } from "./lib/rateLimit";
 import { isUnlimitedUser } from "./lib/tiers";
 import { enforceUserQuota } from "./lib/quota";
@@ -41,6 +41,79 @@ function validateItem(item: unknown): item is ScanItem {
     && typeof o.protein === "number" && o.protein >= 0
     && typeof o.carbs === "number" && o.carbs >= 0
     && typeof o.fat === "number" && o.fat >= 0;
+}
+
+// ─── Text → meal extractor ────────────────────────────────────────────
+// Used by the Telegram bot when a user TYPES a meal description instead
+// of sending a photo. Returns either:
+//   { intent: "log_meal", items, totalCal, totalProtein, confidence }
+//   { intent: "chat" }                              ← not a meal-log message
+//
+// The classifier is intentionally conservative — only past/present-tense
+// reports of food eaten get treated as logs. Planning ("I'm thinking
+// of having dosa"), questions, and greetings fall through to chat.
+
+const TEXT_INTAKE_SYSTEM = `You are an Indian-food intent classifier and meal extractor for Thalify, a nutrition coach.
+
+Given ONE user message, decide the intent:
+- "log_meal" — user is reporting food they ate or are eating RIGHT NOW. Past or present tense. Examples: "I had X", "just ate Y", "khaya biryani", "having 2 rotis and dal".
+- "chat" — anything else. Questions ("what should I eat?"), planning ("I'm thinking of pizza"), greetings, complaints, generic chat.
+
+If log_meal: extract each food item with:
+- name in Title Case (English or transliterated)
+- portion in Indian terms when natural (katori, roti piece, glass, plate) — or use the stated quantity (200g, 1 cup)
+- realistic Indian-home-cooking calorie + macro estimates per portion
+- protein/carbs/fat in grams
+
+Reply with JSON ONLY — no markdown fences, no preamble.
+
+For log_meal:
+{"intent":"log_meal","items":[{"name":"Butter Paneer","portion":"200g","cal":580,"protein":25,"carbs":8,"fat":50}],"totalCal":580,"totalProtein":25,"confidence":0.85}
+
+For chat:
+{"intent":"chat"}
+
+Examples:
+- "I had 200g butter paneer and 2 rotis" → log_meal with both items
+- "khaya biryani" → log_meal, biryani 1 plate, ~550 cal
+- "had a katori dal-rice for lunch" → log_meal
+- "what should I eat for dinner?" → chat
+- "I'm thinking of having pizza" → chat (planning, not eaten)
+- "thanks" → chat`;
+
+type TextExtractResult =
+  | { intent: "log_meal"; items: ScanItem[]; totalCal: number; totalProtein: number; confidence: number }
+  | { intent: "chat" };
+
+async function extractFromText(message: string): Promise<TextExtractResult> {
+  const raw = await generateText({
+    system: TEXT_INTAKE_SYSTEM,
+    messages: [{ role: "user", content: message }],
+    maxTokens: 1024,
+  });
+  const parsed = extractJson<{
+    intent?: string;
+    items?: unknown;
+    totalCal?: number;
+    totalProtein?: number;
+    confidence?: number;
+  }>(raw);
+  if (parsed.intent === "log_meal" && Array.isArray(parsed.items)) {
+    const cleaned = (parsed.items as unknown[]).filter(validateItem);
+    if (cleaned.length === 0) return { intent: "chat" };
+    const totalCal =
+      typeof parsed.totalCal === "number"
+        ? parsed.totalCal
+        : cleaned.reduce((s, i) => s + i.cal, 0);
+    const totalProtein =
+      typeof parsed.totalProtein === "number"
+        ? parsed.totalProtein
+        : cleaned.reduce((s, i) => s + i.protein, 0);
+    const confidence =
+      typeof parsed.confidence === "number" ? parsed.confidence : 0.7;
+    return { intent: "log_meal", items: cleaned, totalCal, totalProtein, confidence };
+  }
+  return { intent: "chat" };
 }
 
 async function scan(imageBase64: string, mediaType: MediaType): Promise<ScanItem[]> {
@@ -219,6 +292,76 @@ export const scanMealAsUser = internalAction({
     }
 
     return { scanResultId, mealLogId, items: cleaned, totalCal, totalProtein, mealType: autoLogAsMealType };
+  },
+});
+
+// ─── Telegram text-intake entry point ─────────────────────────────────
+// Mirrors scanMealAsUser but takes a free-text message instead of an
+// image. Reuses the same scanResults table + the same `log:` callback
+// flow, so once items are extracted the user gets the same buttons and
+// the same confirmation dance — a typed meal becomes a real mealLog
+// only after the user taps "Log as Lunch" (or whichever).
+
+export const extractMealFromTextAsUser = internalAction({
+  args: {
+    userId: v.id("users"),
+    message: v.string(),
+  },
+  handler: async (
+    ctx,
+    { userId, message },
+  ): Promise<
+    | { intent: "log_meal"; scanResultId: string; items: ScanItem[]; totalCal: number; totalProtein: number }
+    | { intent: "chat" }
+  > => {
+    const trimmed = message.trim();
+    if (trimmed.length === 0) return { intent: "chat" };
+    if (trimmed.length > 800) {
+      // Very long messages are almost always rambling chat, not a meal log.
+      // Skip the extractor call entirely so we don't waste a Gemini round-trip.
+      return { intent: "chat" };
+    }
+
+    let extract: TextExtractResult;
+    try {
+      extract = await extractFromText(trimmed);
+    } catch (err) {
+      const c = classifyError(err);
+      if (c.code === "parse") {
+        // Bad JSON from the model — treat as chat so the user still gets a reply.
+        return { intent: "chat" };
+      }
+      throw new Error(c.userMessage, { cause: err });
+    }
+
+    if (extract.intent !== "log_meal") return { intent: "chat" };
+
+    // Charge a scan against rate-limit/quota only when we actually extracted
+    // a meal — chat fall-throughs shouldn't burn the user's scan budget.
+    await ctx.runMutation(internal.scan.enforceScanRateLimit, { userId });
+
+    const scanResultId: string = await ctx.runMutation(internal.scan.saveScanResultInternal, {
+      userId,
+      items: extract.items,
+      rawItems: extract.items,
+      totalCal: extract.totalCal,
+      totalProtein: extract.totalProtein,
+      confidence: extract.confidence,
+    });
+
+    await ctx.runMutation(internal.nudges.queue.enqueue, {
+      userId,
+      type: "scan_completed",
+      payload: { totalCal: extract.totalCal, itemCount: extract.items.length, source: "text" },
+    });
+
+    return {
+      intent: "log_meal",
+      scanResultId,
+      items: extract.items,
+      totalCal: extract.totalCal,
+      totalProtein: extract.totalProtein,
+    };
   },
 });
 

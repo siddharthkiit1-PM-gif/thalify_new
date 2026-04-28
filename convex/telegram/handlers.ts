@@ -71,7 +71,16 @@ function scanButtons(scanResultId: string, suggestedMealType: MealType): InlineK
   ];
 }
 
-// ── Text → Health Buddy ───────────────────────────────────────────────
+// ── Text → meal extractor (with chat fallback) ────────────────────────
+// First we ask the AI: is this a meal-log or just chat? If it's a meal,
+// we present the same [Log as Lunch] [Skip] [Breakfast] [Snack] [Dinner]
+// buttons the photo flow uses. The user taps one and `handleCallback`
+// writes to mealLogs — same path as photo logs, no new code needed.
+//
+// If it's chat (questions, planning, smalltalk), we fall through to
+// Health Buddy. Critically, the chat path can NEVER claim to log food
+// (system prompt enforces this) — only the structured extraction +
+// button-tap below actually persists a log.
 
 export const handleText = internalAction({
   args: { chatId: v.string(), text: v.string() },
@@ -85,6 +94,39 @@ export const handleText = internalAction({
       return;
     }
     await sendChatAction(chatId, "typing");
+
+    // Meal-extract first. If the user typed a meal, route to the log flow.
+    let extract:
+      | { intent: "log_meal"; scanResultId: string; items: ScanItem[]; totalCal: number; totalProtein: number }
+      | { intent: "chat" }
+      | null = null;
+    try {
+      extract = await ctx.runAction(internal.scan.extractMealFromTextAsUser, {
+        userId: lookup.userId,
+        message: text,
+      });
+    } catch (err) {
+      // Extractor failures are non-fatal — fall through to chat. The user
+      // still gets a reply rather than a confusing error.
+      console.warn("text-intake extract failed, falling through to chat:", err);
+      extract = { intent: "chat" };
+    }
+
+    if (extract && extract.intent === "log_meal") {
+      const suggested = guessMealTypeFromIST();
+      const summary = summariseScan(
+        extract.items,
+        extract.totalCal,
+        extract.totalProtein,
+        suggested,
+      );
+      await sendText(chatId, summary, {
+        inlineKeyboard: scanButtons(extract.scanResultId, suggested),
+      });
+      return;
+    }
+
+    // Chat fallback — Health Buddy reply, no logging.
     try {
       const reply: string = await ctx.runAction(internal.chat.chatAsUser, {
         userId: lookup.userId,
