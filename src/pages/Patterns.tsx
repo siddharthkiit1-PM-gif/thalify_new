@@ -46,8 +46,17 @@ export default function Patterns() {
     setLoading(true)
     setError('')
     try {
-      const res = await analyzePatterns()
-      setResult(res as PatternResult)
+      const res = await analyzePatterns() as Partial<PatternResult> | null | undefined
+      // Defensive shape — the LLM occasionally returns valid JSON but with
+      // a missing array. We never want `.map()` on `undefined` to crash the page.
+      const safe: PatternResult = {
+        topPatterns: Array.isArray(res?.topPatterns) ? res!.topPatterns : [],
+        wins: Array.isArray(res?.wins) ? res!.wins : [],
+        improvements: Array.isArray(res?.improvements) ? res!.improvements : [],
+        weeklyInsight: typeof res?.weeklyInsight === 'string' ? res!.weeklyInsight : '',
+        streakMessage: typeof res?.streakMessage === 'string' ? res!.streakMessage : '',
+      }
+      setResult(safe)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Analysis failed — please retry')
     } finally {
@@ -228,42 +237,50 @@ export default function Patterns() {
 
         {result && (
           <div>
-            <div style={{ background: 'var(--sage-100)', borderRadius: 16, padding: 20, marginBottom: 20 }}>
-              <div style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--ink-2)' }}>{result.weeklyInsight}</div>
-            </div>
+            {result.weeklyInsight && (
+              <div style={{ background: 'var(--sage-100)', borderRadius: 16, padding: 20, marginBottom: 20 }}>
+                <div style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--ink-2)' }}>{result.weeklyInsight}</div>
+              </div>
+            )}
 
-            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, padding: 20, marginBottom: 16 }}>
-              <div className="label" style={{ marginBottom: 12 }}>Patterns Spotted</div>
-              {result.topPatterns.map((p, i) => (
-                <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 10, fontSize: 14, lineHeight: 1.6 }}>
-                  <span style={{ color: 'var(--muted)', minWidth: 20 }}>{i + 1}.</span>
-                  <span style={{ color: 'var(--ink-2)' }}>{p}</span>
+            {result.topPatterns.length > 0 && (
+              <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, padding: 20, marginBottom: 16 }}>
+                <div className="label" style={{ marginBottom: 12 }}>Patterns Spotted</div>
+                {result.topPatterns.map((p, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 10, fontSize: 14, lineHeight: 1.6 }}>
+                    <span style={{ color: 'var(--muted)', minWidth: 20 }}>{i + 1}.</span>
+                    <span style={{ color: 'var(--ink-2)' }}>{p}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {(result.wins.length > 0 || result.improvements.length > 0) && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, padding: 20 }}>
+                  <div className="label" style={{ marginBottom: 12, color: 'var(--sage-700)' }}>Wins</div>
+                  {result.wins.map((w, i) => (
+                    <div key={i} style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 6, color: 'var(--ink-2)' }}>
+                      <span style={{ marginRight: 6 }}>✓</span>{w}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-              <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, padding: 20 }}>
-                <div className="label" style={{ marginBottom: 12, color: 'var(--sage-700)' }}>Wins</div>
-                {result.wins.map((w, i) => (
-                  <div key={i} style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 6, color: 'var(--ink-2)' }}>
-                    <span style={{ marginRight: 6 }}>✓</span>{w}
-                  </div>
-                ))}
+                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, padding: 20 }}>
+                  <div className="label" style={{ marginBottom: 12 }}>Improve</div>
+                  {result.improvements.map((imp, i) => (
+                    <div key={i} style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 6, color: 'var(--ink-2)' }}>
+                      <span style={{ marginRight: 6 }}>→</span>{imp}
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, padding: 20 }}>
-                <div className="label" style={{ marginBottom: 12 }}>Improve</div>
-                {result.improvements.map((imp, i) => (
-                  <div key={i} style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 6, color: 'var(--ink-2)' }}>
-                    <span style={{ marginRight: 6 }}>→</span>{imp}
-                  </div>
-                ))}
-              </div>
-            </div>
+            )}
 
-            <div style={{ background: 'var(--sand)', borderRadius: 12, padding: 16, fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.6, marginBottom: 16 }}>
-              {result.streakMessage}
-            </div>
+            {result.streakMessage && (
+              <div style={{ background: 'var(--sand)', borderRadius: 12, padding: 16, fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.6, marginBottom: 16 }}>
+                {result.streakMessage}
+              </div>
+            )}
 
             <button onClick={handleAnalyze} disabled={loading} className="btn-secondary" style={{ width: '100%' }}>
               {loading ? 'Re-analyzing…' : 'Refresh Analysis'}
