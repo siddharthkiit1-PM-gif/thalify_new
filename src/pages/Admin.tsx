@@ -19,6 +19,7 @@ export default function Admin() {
     onlyNegativeFeedback: filter === 'inaccurate',
   })
   const stats = useQuery(api.adminScans.scanStats)
+  const dailyStats = useQuery(api.admin.dailyActiveUsers)
 
   if (currentUser === undefined) return <div style={{ padding: 40, textAlign: 'center' }}>Loading…</div>
   if (!currentUser?.isAdmin) {
@@ -39,8 +40,30 @@ export default function Admin() {
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
       <Navbar />
       <div className="page" style={{ maxWidth: 1080 }}>
-        <h1 className="serif" style={{ fontSize: 28, marginBottom: 4 }}>Scan Admin</h1>
-        <p style={{ color: 'var(--muted)', marginBottom: 20 }}>Review scans, spot systematic errors, feed insights back into the prompt.</p>
+        <h1 className="serif" style={{ fontSize: 28, marginBottom: 4 }}>Admin</h1>
+        <p style={{ color: 'var(--muted)', marginBottom: 20 }}>Daily engagement, customer base, and scan-quality review — all in one place.</p>
+
+        {dailyStats && (
+          <div style={{ marginBottom: 24 }}>
+            <div className="label" style={{ marginBottom: 10 }}>Today · {dailyStats.date}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 14 }}>
+              <StatCard label="Active users today" value={dailyStats.distinctUsersWhoLoggedAMealToday} />
+              <StatCard label="Meal logs today" value={dailyStats.totalMealLogsToday} />
+              <StatCard label="Scans today" value={dailyStats.totalScansToday} />
+              <StatCard label="Distinct scanners" value={dailyStats.distinctUsersWhoScannedToday} />
+            </div>
+            <div className="label" style={{ marginBottom: 10 }}>Customer base</div>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+              <StatCard label="Total users" value={dailyStats.totalUsersInDatabase} />
+              <StatCard label="Paid (lifetime)" value={dailyStats.paidUsers} />
+              <StatCard label="Founder slots used" value={`${dailyStats.foundersFilled} / ${dailyStats.foundersTotal}`} />
+              <StatCard label="Slots remaining" value={dailyStats.foundersRemaining} />
+            </div>
+          </div>
+        )}
+
+        <h2 className="serif" style={{ fontSize: 22, marginBottom: 6 }}>Scan review</h2>
+        <p style={{ color: 'var(--muted)', marginBottom: 16, fontSize: 14 }}>Spot systematic errors, feed insights back into the prompt.</p>
 
         {stats && (
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(6, 1fr)', gap: 12, marginBottom: 24 }}>

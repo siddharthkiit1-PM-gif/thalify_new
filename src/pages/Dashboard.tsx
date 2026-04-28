@@ -65,8 +65,35 @@ export default function Dashboard() {
 
           <NotificationBanner />
 
-          {/* Founder offer — only visible to free-tier users */}
-          {profile && profile.plan !== 'lifetime' && (
+          {/* Founder offer — three states: admin (disabled message), free (clickable), other lifetime (hidden) */}
+          {profile && currentUser?.isAdmin ? (
+            <div
+              style={{
+                background: 'linear-gradient(135deg, var(--sand) 0%, var(--cream) 100%)',
+                border: '1px dashed var(--sage-700)',
+                borderRadius: 14,
+                padding: '14px 18px',
+                marginBottom: 16,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+                opacity: 0.85,
+                cursor: 'not-allowed',
+              }}
+              aria-disabled
+            >
+              <div style={{ fontSize: 26 }}>🛠️</div>
+              <div style={{ flex: 1 }}>
+                <div className="serif" style={{ fontSize: 17, color: 'var(--ink)', marginBottom: 2, letterSpacing: '-0.005em' }}>
+                  You're the admin — no need to pay
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--ink-2)' }}>
+                  Lifetime access is on the house. Open <span style={{ color: 'var(--sage-700)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => navigate('/admin')}>/admin</span> for stats.
+                </div>
+              </div>
+              <span style={{ fontSize: 14, fontFamily: 'var(--mono)', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>admin</span>
+            </div>
+          ) : profile && profile.plan !== 'lifetime' ? (
             <div
               onClick={() => navigate('/upgrade')}
               style={{
@@ -95,7 +122,7 @@ export default function Dashboard() {
               </div>
               <span style={{ fontSize: 18, color: 'var(--sage-700)' }}>→</span>
             </div>
-          )}
+          ) : null}
 
           {profile && !profile.telegramOptIn && (
             <div className="tg-card">
