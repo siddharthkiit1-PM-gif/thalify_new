@@ -38,6 +38,14 @@ export const dailyActiveUsersInternal = internalQuery({
       .unique();
     const foundersFilled = founderCounter?.value ?? 0;
 
+    const allPayments = await ctx.db.query("payments").collect();
+    const captured = allPayments.filter((p) => p.status === "captured");
+    const refunded = allPayments.filter((p) => p.status === "refunded");
+    const failed = allPayments.filter((p) => p.status === "failed");
+    const created = allPayments.filter((p) => p.status === "created");
+    const revenueRupees = captured.reduce((s, p) => s + p.amount, 0) / 100;
+    const refundedRupees = refunded.reduce((s, p) => s + p.amount, 0) / 100;
+
     return {
       date: today,
       distinctUsersWhoLoggedAMealToday: distinctLogUsers.size,
@@ -49,6 +57,13 @@ export const dailyActiveUsersInternal = internalQuery({
       foundersFilled,
       foundersTotal: 50,
       foundersRemaining: Math.max(0, 50 - foundersFilled),
+      paymentsCaptured: captured.length,
+      paymentsRefunded: refunded.length,
+      paymentsFailed: failed.length,
+      paymentsCreatedNotCompleted: created.length,
+      revenueRupees,
+      refundedRupees,
+      netRevenueRupees: revenueRupees - refundedRupees,
     };
   },
 });
@@ -93,6 +108,16 @@ export const dailyActiveUsers = query({
       .unique();
     const foundersFilled = founderCounter?.value ?? 0;
 
+    // Razorpay payments audit — counts + revenue by status. Amounts are in
+    // paise (9900 = ₹99) so we divide by 100 for the rupee total.
+    const allPayments = await ctx.db.query("payments").collect();
+    const captured = allPayments.filter((p) => p.status === "captured");
+    const refunded = allPayments.filter((p) => p.status === "refunded");
+    const failed = allPayments.filter((p) => p.status === "failed");
+    const created = allPayments.filter((p) => p.status === "created");
+    const revenueRupees = captured.reduce((s, p) => s + p.amount, 0) / 100;
+    const refundedRupees = refunded.reduce((s, p) => s + p.amount, 0) / 100;
+
     return {
       date: today,
       distinctUsersWhoLoggedAMealToday: distinctLogUsers.size,
@@ -104,6 +129,13 @@ export const dailyActiveUsers = query({
       foundersFilled,
       foundersTotal: 50,
       foundersRemaining: Math.max(0, 50 - foundersFilled),
+      paymentsCaptured: captured.length,
+      paymentsRefunded: refunded.length,
+      paymentsFailed: failed.length,
+      paymentsCreatedNotCompleted: created.length,
+      revenueRupees,
+      refundedRupees,
+      netRevenueRupees: revenueRupees - refundedRupees,
     };
   },
 });

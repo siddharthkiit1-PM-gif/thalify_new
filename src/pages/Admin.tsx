@@ -53,11 +53,21 @@ export default function Admin() {
               <StatCard label="Distinct scanners" value={dailyStats.distinctUsersWhoScannedToday} />
             </div>
             <div className="label" style={{ marginBottom: 10 }}>Customer base</div>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 14 }}>
               <StatCard label="Total users" value={dailyStats.totalUsersInDatabase} />
               <StatCard label="Paid (lifetime)" value={dailyStats.paidUsers} />
               <StatCard label="Founder slots used" value={`${dailyStats.foundersFilled} / ${dailyStats.foundersTotal}`} />
               <StatCard label="Slots remaining" value={dailyStats.foundersRemaining} />
+            </div>
+            <div className="label" style={{ marginBottom: 10 }}>Payments · Razorpay</div>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+              <StatCard label="Paid ✓ (captured)" value={dailyStats.paymentsCaptured} />
+              <StatCard label="Refunded" value={dailyStats.paymentsRefunded} />
+              <StatCard label="Failed" value={dailyStats.paymentsFailed} />
+              <StatCard label="Pending checkout" value={dailyStats.paymentsCreatedNotCompleted} />
+              <StatCard label="Revenue" value={`₹${dailyStats.revenueRupees.toLocaleString('en-IN')}`} />
+              <StatCard label="Refunded amt" value={`₹${dailyStats.refundedRupees.toLocaleString('en-IN')}`} />
+              <StatCard label="Net revenue" value={`₹${dailyStats.netRevenueRupees.toLocaleString('en-IN')}`} />
             </div>
           </div>
         )}
