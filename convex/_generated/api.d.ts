@@ -35,6 +35,7 @@ import type * as nudges_queue from "../nudges/queue.js";
 import type * as nudges_rules from "../nudges/rules.js";
 import type * as nudges_seed from "../nudges/seed.js";
 import type * as nudges_signal from "../nudges/signal.js";
+import type * as nudges_signalSeeders from "../nudges/signalSeeders.js";
 import type * as nudges_templatePicker from "../nudges/templatePicker.js";
 import type * as nudges_timeSeeders from "../nudges/timeSeeders.js";
 import type * as nudges_worker from "../nudges/worker.js";
@@ -91,6 +92,7 @@ declare const fullApi: ApiFromModules<{
   "nudges/rules": typeof nudges_rules;
   "nudges/seed": typeof nudges_seed;
   "nudges/signal": typeof nudges_signal;
+  "nudges/signalSeeders": typeof nudges_signalSeeders;
   "nudges/templatePicker": typeof nudges_templatePicker;
   "nudges/timeSeeders": typeof nudges_timeSeeders;
   "nudges/worker": typeof nudges_worker;

@@ -27,7 +27,8 @@ type SeedType =
   | "time_lunch_check"
   | "time_dinner_check"
   | "time_daily_summary"
-  | "weekly_insight";
+  | "weekly_insight"
+  | "daily_log_prompt";
 
 async function seedFor(
   ctx: GenericActionCtx<DataModel>,
@@ -62,4 +63,8 @@ export const seedDailySummaries = internalAction({
 export const seedWeeklyInsights = internalAction({
   args: {},
   handler: async (ctx) => seedFor(ctx, "weekly_insight"),
+});
+export const seedDailyLogPrompt = internalAction({
+  args: {},
+  handler: async (ctx) => seedFor(ctx, "daily_log_prompt"),
 });

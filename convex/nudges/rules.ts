@@ -70,6 +70,16 @@ export function matchTrigger(event: MockEvent, state: MockUserState): TriggerMat
     case "gap_detected":
       return { trigger: "re-engagement", bucket: "prompt" };
 
+    case "daily_log_prompt":
+      // Only nudge if the user hasn't logged anything today.
+      // If they already logged a meal, the daily prompt is silent — no spam.
+      return state.mealCountToday === 0
+        ? { trigger: "daily-log-prompt", bucket: "prompt" }
+        : null;
+
+    case "food_repetition_detected":
+      return { trigger: "food-repetition", bucket: "prompt" };
+
     case "weekly_insight":
       return { trigger: "weekly-recap", bucket: "reflection" };
 

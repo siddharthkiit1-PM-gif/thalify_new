@@ -222,6 +222,8 @@ export default defineSchema({
       v.literal("streak_milestone"),
       v.literal("gap_detected"),
       v.literal("weekly_insight"),
+      v.literal("daily_log_prompt"),
+      v.literal("food_repetition_detected"),
     ),
     payload: v.optional(v.any()),
     status: v.union(
