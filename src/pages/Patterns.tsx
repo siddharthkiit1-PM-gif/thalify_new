@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Navbar from '../components/Navbar'
 import { useQuery, useAction } from 'convex/react'
 import { api } from '../../convex/_generated/api'
@@ -17,6 +17,7 @@ export default function Patterns() {
   const [result, setResult] = useState<PatternResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const autoTriggered = useRef(false)
 
   const daysLogged = new Set(logs?.map(l => l.date) ?? []).size
   const hasEnoughData = daysLogged >= 3
@@ -28,6 +29,17 @@ export default function Patterns() {
     d.setDate(d.getDate() - (27 - i))
     return d.toISOString().split('T')[0]
   })
+
+  // Last-14 daily calorie totals for the trend chart
+  const last14 = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() - (13 - i))
+    const dateStr = d.toISOString().split('T')[0]
+    const dayLogs = (logs ?? []).filter(l => l.date === dateStr)
+    const total = dayLogs.reduce((s, l) => s + l.totalCal, 0)
+    return { dateStr, total, label: d.getDate(), monthDay: d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) }
+  })
+  const maxCal = Math.max(1, ...last14.map(d => d.total))
 
   async function handleAnalyze() {
     setLoading(true)
@@ -41,6 +53,17 @@ export default function Patterns() {
       setLoading(false)
     }
   }
+
+  // Auto-run analysis once when the user has enough data. The ref guards
+  // against re-triggering after the user manually refreshes (which would
+  // already set result/error) — we only fire on the first eligible render.
+  useEffect(() => {
+    if (hasEnoughData && !autoTriggered.current && !result && !loading) {
+      autoTriggered.current = true
+      handleAnalyze()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasEnoughData])
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
@@ -88,32 +111,75 @@ export default function Patterns() {
           </div>
         </div>
 
-        {!hasEnoughData && (
-          <div style={{ background: 'var(--sand)', borderRadius: 16, padding: 24, textAlign: 'center', marginBottom: 24 }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>📊</div>
-            <div className="serif" style={{ fontSize: 22, marginBottom: 6, letterSpacing: '-0.01em' }}>Log {3 - daysLogged} more day{3 - daysLogged !== 1 ? 's' : ''} to unlock patterns</div>
-            <div style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.55 }}>Three days is the minimum we need to see honest patterns. Two meals tells us very little; a week tells us everything.</div>
+        {/* Daily calorie trend — last 14 days. Always visible, even with <3 days */}
+        {hasEnoughData && (
+          <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, padding: 20, marginBottom: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
+              <div className="label">Daily Calories — Last 14 Days</div>
+              <div className="mono" style={{ fontSize: 11, color: 'var(--muted)', letterSpacing: 0.5 }}>
+                avg {Math.round(last14.filter(d => d.total > 0).reduce((s, d) => s + d.total, 0) / Math.max(1, last14.filter(d => d.total > 0).length))} cal
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 80 }}>
+              {last14.map((d, i) => {
+                const h = d.total === 0 ? 4 : Math.max(8, (d.total / maxCal) * 72)
+                return (
+                  <div
+                    key={i}
+                    title={`${d.monthDay} · ${d.total} cal`}
+                    style={{
+                      flex: 1,
+                      height: h,
+                      background: d.total === 0 ? 'var(--border)' : 'var(--sage-700)',
+                      opacity: d.total === 0 ? 0.35 : 1,
+                      borderRadius: '4px 4px 0 0',
+                      transition: 'background 0.2s',
+                    }}
+                  />
+                )
+              })}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 10, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
+              <span>{last14[0].monthDay}</span>
+              <span>today</span>
+            </div>
           </div>
         )}
 
-        {hasEnoughData && !result && (
-          <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <button
-              onClick={handleAnalyze}
-              disabled={loading}
-              className="btn-primary"
-              style={{ fontSize: 15, padding: '14px 32px' }}
-            >
-              {loading ? 'Analyzing…' : 'Analyze My Patterns'}
+        {!hasEnoughData && (
+          <div style={{ background: 'var(--sand)', borderRadius: 16, padding: 28, textAlign: 'center', marginBottom: 24 }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>📊</div>
+            <div className="serif" style={{ fontSize: 22, marginBottom: 8, letterSpacing: '-0.01em' }}>
+              Log {3 - daysLogged} more day{3 - daysLogged !== 1 ? 's' : ''} to unlock patterns
+            </div>
+            <div style={{ fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.55, maxWidth: 380, margin: '0 auto' }}>
+              Three days is the minimum we need to see honest patterns. Two meals tells us very little; a week tells us everything. Once you cross the line, this page automatically shows your trends + AI insights.
+            </div>
+          </div>
+        )}
+
+        {hasEnoughData && loading && !result && (
+          <div style={{ background: 'var(--sage-100)', borderRadius: 16, padding: 24, textAlign: 'center', marginBottom: 24 }}>
+            <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 14 }}>
+              {[0, 1, 2].map(i => (
+                <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--sage-700)', animation: `bounce 1.1s ${i * 0.15}s infinite ease-in-out` }} />
+              ))}
+            </div>
+            <div className="serif" style={{ fontSize: 18, marginBottom: 4, letterSpacing: '-0.005em' }}>
+              Reading {daysLogged} days of meals…
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+              Surfacing your patterns + one small thing to try this week.
+            </div>
+          </div>
+        )}
+
+        {hasEnoughData && error && !loading && (
+          <div style={{ background: 'var(--red-bg, #FDF2F2)', border: '1px solid var(--red-br, #F5D0D0)', borderRadius: 12, padding: 16, marginBottom: 24, textAlign: 'center' }}>
+            <div style={{ color: 'var(--red, #B91C1C)', fontSize: 14, marginBottom: 10 }}>{error}</div>
+            <button onClick={handleAnalyze} className="btn btn-secondary btn-sm">
+              Retry
             </button>
-            {loading && (
-              <div style={{ marginTop: 16, color: 'var(--muted)', fontSize: 14 }}>
-                Reading through {daysLogged} days of meals…
-              </div>
-            )}
-            {error && (
-              <div style={{ marginTop: 12, color: '#c0392b', fontSize: 14 }}>{error}</div>
-            )}
           </div>
         )}
 
