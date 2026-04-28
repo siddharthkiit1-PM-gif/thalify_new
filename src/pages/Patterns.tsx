@@ -13,6 +13,7 @@ type PatternResult = {
 
 export default function Patterns() {
   const logs = useQuery(api.meals.getRecentLogs)
+  const topSignal = useQuery(api.nudges.queries.topSignal)
   const analyzePatterns = useAction(api.patterns.analyzePatterns)
   const [result, setResult] = useState<PatternResult | null>(null)
   const [loading, setLoading] = useState(false)
@@ -78,6 +79,48 @@ export default function Patterns() {
             We read every meal you've logged and surface the patterns — what's working, what's quietly off, and one small thing to try next week.
           </p>
         </div>
+
+        {/* Top signal — the most recent live nudge from the engine */}
+        {topSignal && (
+          <div style={{
+            background: 'linear-gradient(135deg, var(--sage-100) 0%, #DCEFE0 100%)',
+            border: '1px solid var(--sage-700)',
+            borderRadius: 16,
+            padding: '18px 20px',
+            marginBottom: 20,
+            position: 'relative',
+          }}>
+            <div style={{
+              fontFamily: 'var(--mono)',
+              fontSize: 10.5,
+              letterSpacing: '0.18em',
+              color: 'var(--sage-700)',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              marginBottom: 8,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--sage-700)', display: 'inline-block', animation: 'pulseDot 2s infinite' }} />
+              Today's signal
+            </div>
+            <div style={{ fontSize: 15, lineHeight: 1.55, color: 'var(--ink)' }}>
+              {topSignal.message}
+            </div>
+            <div style={{ marginTop: 10, fontSize: 11.5, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
+              {new Date(topSignal.createdAt).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
+              {' · '}
+              {topSignal.deliveredViaTelegram ? 'sent to telegram' : 'in-app'}
+            </div>
+            <style>{`
+              @keyframes pulseDot {
+                0%, 100% { opacity: 1; transform: scale(1); }
+                50% { opacity: 0.5; transform: scale(1.4); }
+              }
+            `}</style>
+          </div>
+        )}
 
         {/* Heatmap */}
         <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, padding: 20, marginBottom: 24 }}>

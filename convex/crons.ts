@@ -35,6 +35,15 @@ crons.cron(
   internal.nudges.signalSeeders.seedFoodRepetition,
 );
 
+// Soft upgrade nudge: free users with 3+ days logged, 7-day cooldown.
+// Wednesday 10 AM IST (= 4:30 UTC) — mid-week, before the food-repetition
+// run, so they don't compete on the queue under the 1/day free cap.
+crons.cron(
+  "seed upgrade prompts",
+  "30 4 * * 3",
+  internal.nudges.signalSeeders.seedUpgradePrompts,
+);
+
 crons.cron(
   "seed daily summaries",
   "0 16 * * *",

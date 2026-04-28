@@ -4,6 +4,7 @@ import {
   passesBucketDedup,
   isInQuietHours,
   isStale,
+  frequencyCapForPlan,
 } from "./gatekeepers";
 
 describe("withinFrequencyCap", () => {
@@ -15,6 +16,18 @@ describe("withinFrequencyCap", () => {
   });
   it("allows when count is 0", () => {
     expect(withinFrequencyCap(0, 5)).toBe(true);
+  });
+});
+
+describe("frequencyCapForPlan", () => {
+  it("free plan → 1 nudge/day", () => {
+    expect(frequencyCapForPlan("free")).toBe(1);
+  });
+  it("lifetime plan → 5 nudges/day", () => {
+    expect(frequencyCapForPlan("lifetime")).toBe(5);
+  });
+  it("undefined plan defaults to free (1/day)", () => {
+    expect(frequencyCapForPlan(undefined)).toBe(1);
   });
 });
 

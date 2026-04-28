@@ -126,3 +126,79 @@ export const seedFoodRepetition = internalAction({
     return { seeded: hits.length };
   },
 });
+
+/**
+ * Free-tier users who've shown engagement (3+ distinct days logged in last 14)
+ * AND haven't been pinged about upgrading in the last 7 days. Lightweight rule —
+ * no scoring model — just "engaged enough to bother, not nagged recently."
+ */
+const UPGRADE_ENGAGEMENT_DAYS = 3;
+const UPGRADE_LOOKBACK_DAYS = 14;
+const UPGRADE_COOLDOWN_DAYS = 7;
+
+export const queryUpgradeCandidates = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const lookbackDate = dateAtDaysAgo(UPGRADE_LOOKBACK_DAYS);
+    const cooldownMs = UPGRADE_COOLDOWN_DAYS * 24 * 3600 * 1000;
+    const now = Date.now();
+
+    const profiles = await ctx.db.query("profiles").collect();
+    const freeUserIds: Id<"users">[] = [];
+    for (const p of profiles) {
+      const plan = p.plan ?? "free";
+      if (plan === "free") freeUserIds.push(p.userId);
+    }
+    if (freeUserIds.length === 0) return [];
+
+    const allLogs = await ctx.db.query("mealLogs").collect();
+    const daysLoggedByUser = new Map<Id<"users">, Set<string>>();
+    for (const log of allLogs) {
+      if (log.date < lookbackDate) continue;
+      let s = daysLoggedByUser.get(log.userId);
+      if (!s) {
+        s = new Set();
+        daysLoggedByUser.set(log.userId, s);
+      }
+      s.add(log.date);
+    }
+
+    const candidates: Id<"users">[] = [];
+    for (const userId of freeUserIds) {
+      const days = daysLoggedByUser.get(userId)?.size ?? 0;
+      if (days < UPGRADE_ENGAGEMENT_DAYS) continue;
+
+      // cooldown — skip if we already sent an upgrade nudge in the last 7d.
+      const recentUpgrade = await ctx.db
+        .query("notifications")
+        .withIndex("by_userId_createdAt", (q) =>
+          q.eq("userId", userId).gt("createdAt", now - cooldownMs),
+        )
+        .collect();
+      const alreadyNudged = recentUpgrade.some(
+        (n) => n.trigger === "upgrade-prompt",
+      );
+      if (alreadyNudged) continue;
+
+      candidates.push(userId);
+    }
+    return candidates;
+  },
+});
+
+export const seedUpgradePrompts = internalAction({
+  args: {},
+  handler: async (ctx): Promise<{ seeded: number }> => {
+    const userIds: Id<"users">[] = await ctx.runQuery(
+      internal.nudges.signalSeeders.queryUpgradeCandidates,
+      {},
+    );
+    for (const userId of userIds) {
+      await ctx.runMutation(internal.nudges.queue.enqueue, {
+        userId,
+        type: "upgrade_prompt",
+      });
+    }
+    return { seeded: userIds.length };
+  },
+});

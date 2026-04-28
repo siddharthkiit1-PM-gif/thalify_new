@@ -21,6 +21,33 @@ export const recent = query({
   },
 });
 
+/**
+ * The single most recent non-expired signal for this user — what we'd surface
+ * as the topmost card on the Patterns tab. Returns null if there's nothing
+ * fresh. The Patterns page renders a fallback ("we're watching") when null.
+ */
+export const topSignal = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const now = Date.now();
+    // Look back ~7 days; older signals aren't "current."
+    const cutoff = now - 7 * 24 * 3600 * 1000;
+    const recents = await ctx.db
+      .query("notifications")
+      .withIndex("by_userId_createdAt", (q) =>
+        q.eq("userId", userId).gt("createdAt", cutoff),
+      )
+      .order("desc")
+      .take(20);
+    const live = recents.find(
+      (n) => n.expiresAt === undefined || n.expiresAt > now,
+    );
+    return live ?? null;
+  },
+});
+
 export const unreadCount = query({
   args: {},
   handler: async (ctx) => {

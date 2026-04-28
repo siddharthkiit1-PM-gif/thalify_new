@@ -8,6 +8,7 @@ export type MockUserState = {
   goal: "lose" | "maintain" | "diabetes" | "gain";
   dietType: "veg" | "veg_eggs" | "nonveg" | "jain" | "vegan";
   calorieGoal: number;
+  plan?: "free" | "lifetime";
   weightKg?: number;
   heightCm?: number;
   age?: number;
@@ -29,6 +30,7 @@ export function mockUserState(overrides: Partial<MockUserState> = {}): MockUserS
     goal: "lose",
     dietType: "veg",
     calorieGoal: 1500,
+    plan: "lifetime",
     weightKg: 65,
     heightCm: 165,
     age: 30,
@@ -49,7 +51,7 @@ export type MockEvent = {
     | "meal_logged" | "scan_completed"
     | "time_breakfast_check" | "time_lunch_check" | "time_dinner_check"
     | "time_daily_summary" | "streak_milestone" | "gap_detected" | "weekly_insight"
-    | "daily_log_prompt" | "food_repetition_detected";
+    | "daily_log_prompt" | "food_repetition_detected" | "upgrade_prompt";
   payload?: Record<string, unknown>;
   createdAt: number;
 };
