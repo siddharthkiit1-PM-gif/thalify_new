@@ -37,6 +37,32 @@ export const updateDailyLogPromptCopy = internalMutation({
 });
 
 /**
+ * One-shot: fire a water-check nudge for a specific user immediately.
+ * Useful for testing Telegram delivery without waiting for the 12pm /
+ * 6pm IST cron.
+ *
+ * Call: npx convex run admin:fireWaterCheckForEmail --prod '{"email":"x@y.com"}'
+ */
+export const fireWaterCheckForEmail = internalAction({
+  args: { email: v.string() },
+  handler: async (ctx, { email }): Promise<{ fired: boolean; reason?: string }> => {
+    const normalized = email.toLowerCase().trim();
+    const userId = await ctx.runQuery(internal.passwordHistory.getUserIdByEmail, {
+      email: normalized,
+    });
+    if (!userId) return { fired: false, reason: "no user with that email" };
+    await ctx.runMutation(internal.nudges.queue.enqueue, {
+      userId,
+      type: "water_check_time",
+    });
+    // Force-run the worker so the event is processed within seconds, not
+    // the next 60-second cron tick.
+    await ctx.runAction(internal.nudges.worker.processNudgeQueue, {});
+    return { fired: true };
+  },
+});
+
+/**
  * Diagnostic: why are Telegram nudges not landing for a given user?
  * Returns telegram-binding state + last 10 events + last 10 notifications.
  *

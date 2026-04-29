@@ -59,6 +59,20 @@ RULES:
 8. NEVER prescribe medication or mention lab values.
 9. Output ONLY the message text. No quotes, no preamble, no markdown.`;
 
+// Specialized water-reminder prompt — each nudge is unique to the user's
+// state (goal, macros so far, time of day) so two users never get the
+// same line, and the same user gets different lines noon vs evening.
+const WATER_CHECK_SYSTEM_PROMPT = `You are Health Buddy reminding the user to drink water.
+
+Generate ONE short water reminder (1 sentence, max 2) that:
+1. Uses their first name once, naturally — not at the start.
+2. Ties water to ONE relevant thing about THEM right now: their goal, today's calorie/protein state, the time of day, weather, or what they likely just ate / are about to eat.
+3. Is friendly + concrete (give a specific next move — "2 glasses now", "before lunch", "before chai") — never generic "stay hydrated" filler.
+4. Indian context welcome: chai, summer/AC heat, biryani heaviness, post-dal-rice slump, lassi, etc.
+5. NO clichés: "Make sure to drink…", "It's important to…", "Hydration is key…", "Don't forget…".
+
+Output ONLY the message — no quotes, no preamble, no markdown.`;
+
 /**
  * Used only when the AI rewriter fails (Gemini throttle, quota, network).
  * Substitutes {name} with the user's first name. For any *other* unfilled
@@ -97,13 +111,48 @@ function fallback(
   return text;
 }
 
+function describeISTHour(hour: number): string {
+  if (hour >= 4 && hour < 11) return "morning";
+  if (hour >= 11 && hour < 14) return "lunch hour";
+  if (hour >= 14 && hour < 17) return "afternoon";
+  if (hour >= 17 && hour < 20) return "early evening";
+  if (hour >= 20 && hour < 23) return "evening";
+  return "late night";
+}
+
+function getISTHourLocal(): number {
+  const hourStr = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kolkata",
+    hour: "numeric",
+    hour12: false,
+  }).format(new Date());
+  return parseInt(hourStr, 10) % 24;
+}
+
 export async function writeNudge(ctx: WriterContext): Promise<WriterResult> {
   const isPostMealInsight = ctx.trigger === "post-meal-insight";
+  const isWaterCheck = ctx.trigger === "water-check";
+  const istHour = getISTHourLocal();
+  const timeLabel = describeISTHour(istHour);
 
   // Build the user-prompt body. Post-meal-insight uses a richer context
   // block so the AI can ground its suggestion in macros + diet + the
-  // actual items the user ate.
-  const userPrompt = isPostMealInsight
+  // actual items the user ate. Water-check gets a dedicated prompt that
+  // ties the reminder to the user's day-state + time of day.
+  const userPrompt = isWaterCheck
+    ? `Water reminder context:
+- Name: ${ctx.name}
+- Goal: ${ctx.goal}${ctx.dietType ? ` · diet: ${ctx.dietType}` : ""}
+${ctx.calorieGoal ? `- Daily target: ${ctx.calorieGoal} kcal` : ""}
+${ctx.totalCalToday !== undefined ? `- Calories logged today: ${ctx.totalCalToday}` : ""}
+${ctx.weightKg ? `- Weight: ${ctx.weightKg} kg` : ""}
+- Right now in IST: ${istHour}:00 (${timeLabel})
+
+Template hint (use the tone/intent, but personalize to the context above):
+"${ctx.template}"
+
+Output: just the water reminder message — 1 sentence, max 2.`
+    : isPostMealInsight
     ? `User just logged a meal.
 - Name: ${ctx.name}
 - Goal: ${ctx.goal}${ctx.dietType ? ` · diet: ${ctx.dietType}` : ""}
@@ -141,7 +190,11 @@ Output: just the rewritten line.`;
 
   try {
     const text = await generateText({
-      system: isPostMealInsight ? POST_MEAL_INSIGHT_SYSTEM_PROMPT : SYSTEM_PROMPT,
+      system: isWaterCheck
+        ? WATER_CHECK_SYSTEM_PROMPT
+        : isPostMealInsight
+          ? POST_MEAL_INSIGHT_SYSTEM_PROMPT
+          : SYSTEM_PROMPT,
       messages: [{ role: "user", content: userPrompt }],
       maxTokens: 150,
     });
