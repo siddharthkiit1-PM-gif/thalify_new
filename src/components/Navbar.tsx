@@ -80,6 +80,40 @@ export default function Navbar() {
               onClick={() => navigate(`/${s.id}`)}
             >{s.label}</div>
           ))}
+          {/* Free users → clickable Upgrade link. Lifetime users → "Founder" status badge. */}
+          {profile && profile.plan !== 'lifetime' && !currentUser?.isAdmin && (
+            <div
+              className={`nav-link ${current === 'upgrade' ? 'active' : ''}`}
+              onClick={() => navigate('/upgrade')}
+              style={{
+                color: 'var(--sage-700)',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--sage-700)', display: 'inline-block' }} />
+              Upgrade
+            </div>
+          )}
+          {profile && profile.plan === 'lifetime' && !currentUser?.isAdmin && (
+            <div
+              className="nav-link"
+              onClick={() => navigate('/upgrade')}
+              style={{
+                color: 'var(--sage-700)',
+                fontFamily: 'var(--mono)',
+                fontSize: 'var(--fs-micro)',
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+              }}
+              title="Lifetime access · view receipt"
+            >
+              ✓ Founder
+            </div>
+          )}
         </div>
         <div className="nav-right" ref={menuRef} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 4 }}>
           <NotificationBell />

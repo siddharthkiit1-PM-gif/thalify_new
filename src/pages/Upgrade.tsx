@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAction, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import Navbar from '../components/Navbar'
+import Section from '../components/ui/Section'
 import { openRazorpayCheckout } from '../lib/razorpay'
 
 export default function Upgrade() {
@@ -68,15 +69,13 @@ export default function Upgrade() {
       <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
         <Navbar />
         <div className="page" style={{ maxWidth: 560, paddingTop: 56 }}>
-          <div data-eyebrow style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 12 }}>
-            Founder · #{founderNumber} of 50
-          </div>
-          <h1 className="serif" style={{ fontSize: 38, marginBottom: 14, lineHeight: 1.1, letterSpacing: '-0.015em' }}>
-            You&rsquo;re a Thalify Founder.
-          </h1>
-          <p style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--ink-2)', marginBottom: 28 }}>
-            Lifetime access is active. 3,000 AI actions every month, every month, forever. Welcome aboard, {currentUser?.name?.split(/\s+/)[0] ?? 'there'}.
-          </p>
+          <Section
+            eyebrow={`Founder · #${founderNumber} of 50`}
+            title={<>You&rsquo;re a Thalify Founder.</>}
+            subtitle={<>Lifetime access is active. 3,000 AI actions every month, every month, forever. Welcome aboard, {currentUser?.name?.split(/\s+/)[0] ?? 'there'}.</>}
+            hero
+            bottom="var(--space-7)"
+          />
           <div style={{ background: 'var(--sage-100)', borderLeft: '3px solid var(--sage-700)', borderRadius: 12, padding: '16px 20px', marginBottom: 28 }}>
             <div style={{ fontSize: 13, color: 'var(--sage-700)', fontWeight: 600, marginBottom: 6 }}>What you&rsquo;ve unlocked</div>
             <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.75, color: 'var(--ink)' }}>
@@ -98,15 +97,13 @@ export default function Upgrade() {
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
       <Navbar />
       <div className="page" style={{ maxWidth: 560, paddingTop: 40 }}>
-        <div data-eyebrow style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 12 }}>
-          Founder offer · {founderSlots ? `${founderSlots.remaining} of 50 left` : 'Loading…'}
-        </div>
-        <h1 className="serif" style={{ fontSize: 38, marginBottom: 14, lineHeight: 1.1, letterSpacing: '-0.015em' }}>
-          Pay once. Use it for life.
-        </h1>
-        <p style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--ink-2)', marginBottom: 28 }}>
-          The first <strong>50 founders</strong> get lifetime Thalify for a single ₹99 payment — no monthly bills, ever. After that, we switch to the regular monthly plan.
-        </p>
+        <Section
+          eyebrow={`Founder offer · ${founderSlots ? `${founderSlots.remaining} of 50 left` : 'Loading…'}`}
+          title="Pay once. Use it for life."
+          subtitle={<>The first <strong>50 founders</strong> get lifetime Thalify for a single ₹99 payment — no monthly bills, ever. After that, we switch to the regular monthly plan.</>}
+          hero
+          bottom="var(--space-7)"
+        />
 
         {/* Founder slot urgency bar */}
         {founderSlots && (

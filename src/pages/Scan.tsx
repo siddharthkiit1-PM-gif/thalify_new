@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAction, useMutation, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import Navbar from '../components/Navbar'
+import Section from '../components/ui/Section'
 import type { Id } from '../../convex/_generated/dataModel'
 import { useIsMobile } from '../hooks/useIsMobile'
 
@@ -134,13 +135,13 @@ export default function Scan() {
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
       <Navbar />
       <div className="page" style={{ maxWidth: 680 }}>
-        <div data-eyebrow style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10 }}>
-          Scan · {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
-        </div>
-        <h1 className="serif" style={{ fontSize: 36, marginBottom: 6, lineHeight: 1.1, letterSpacing: '-0.015em' }}>Snap your plate.</h1>
-        <p style={{ color: 'var(--ink-2)', marginBottom: 28, fontSize: 15.5, lineHeight: 1.5 }}>
-          Three seconds from photo to calories. Edit anything that looks off — we get better every time you do.
-        </p>
+        <Section
+          eyebrow={`Scan · ${new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}`}
+          title="Snap your plate."
+          subtitle="Three seconds from photo to calories. Edit anything that looks off — we get better every time you do."
+          hero
+          bottom="var(--space-7)"
+        />
 
         {phase === 'upload' && (
           <>

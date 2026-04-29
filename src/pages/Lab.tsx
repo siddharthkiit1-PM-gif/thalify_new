@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { useAction, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import Navbar from '../components/Navbar'
+import Section from '../components/ui/Section'
 
 type Marker = { name: string; value: string; unit: string; status: string; range: string }
 type LabResult = {
@@ -69,15 +70,13 @@ export default function Lab() {
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
       <Navbar />
       <div className="page" style={{ maxWidth: 680, paddingTop: 32 }}>
-        <div style={{ marginBottom: 28 }}>
-          <div data-eyebrow style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10 }}>
-            Medical · Bloodwork
-          </div>
-          <h1 className="serif" style={{ fontSize: 36, marginBottom: 8, lineHeight: 1.1, letterSpacing: '-0.015em' }}>Read your labs.</h1>
-          <p style={{ color: 'var(--ink-2)', fontSize: 15.5, lineHeight: 1.55 }}>
-            Upload a photo of your blood report. We translate the numbers into <em style={{ color: 'var(--sage-700)' }}>specific Indian foods</em> to eat more, eat less, or skip — based on your markers.
-          </p>
-        </div>
+        <Section
+          eyebrow="Medical · Bloodwork"
+          title="Read your labs."
+          subtitle={<>Upload a photo of your blood report. We translate the numbers into <em style={{ color: 'var(--sage-700)' }}>specific Indian foods</em> to eat more, eat less, or skip — based on your markers.</>}
+          hero
+          bottom="var(--space-7)"
+        />
 
         {phase === 'upload' && (
           <>

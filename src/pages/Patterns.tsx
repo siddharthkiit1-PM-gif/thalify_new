@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import Navbar from '../components/Navbar'
+import Card from '../components/ui/Card'
+import Section from '../components/ui/Section'
+import EmptyState from '../components/ui/EmptyState'
 import { useQuery, useAction } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 
@@ -78,46 +81,45 @@ export default function Patterns() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
       <Navbar />
-      <div className="page" style={{ maxWidth: 680, paddingTop: 32 }}>
-        <div style={{ marginBottom: 28 }}>
-          <div data-eyebrow style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10 }}>
-            Insight · Last 28 days
-          </div>
-          <h1 className="serif" style={{ fontSize: 36, marginBottom: 8, lineHeight: 1.1, letterSpacing: '-0.015em' }}>The shape of your eating.</h1>
-          <p style={{ color: 'var(--ink-2)', fontSize: 15.5, lineHeight: 1.55 }}>
-            We read every meal you've logged and surface the patterns — what's working, what's quietly off, and one small thing to try next week.
-          </p>
-        </div>
+      <div className="page" style={{ maxWidth: 680, paddingTop: 'var(--space-7)' }}>
+        <Section
+          eyebrow="Insight · Last 28 days"
+          title="The shape of your eating."
+          subtitle="We read every meal you've logged and surface the patterns — what's working, what's quietly off, and one small thing to try next week."
+          hero
+          bottom="var(--space-7)"
+        />
 
         {/* Top signal — the most recent live nudge from the engine */}
         {topSignal && (
-          <div style={{
-            background: 'linear-gradient(135deg, var(--sage-100) 0%, #DCEFE0 100%)',
-            border: '1px solid var(--sage-700)',
-            borderRadius: 16,
-            padding: '18px 20px',
-            marginBottom: 20,
-            position: 'relative',
-          }}>
+          <Card
+            variant="sage"
+            pad="md"
+            style={{
+              marginBottom: 'var(--space-5)',
+              border: '1px solid var(--sage-700)',
+              position: 'relative',
+            }}
+          >
             <div style={{
               fontFamily: 'var(--mono)',
-              fontSize: 10.5,
+              fontSize: 'var(--fs-label)',
               letterSpacing: '0.18em',
               color: 'var(--sage-700)',
               fontWeight: 700,
               textTransform: 'uppercase',
-              marginBottom: 8,
+              marginBottom: 'var(--space-2)',
               display: 'flex',
               alignItems: 'center',
-              gap: 8,
+              gap: 'var(--space-2)',
             }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--sage-700)', display: 'inline-block', animation: 'pulseDot 2s infinite' }} />
               Today's signal
             </div>
-            <div style={{ fontSize: 15, lineHeight: 1.55, color: 'var(--ink)' }}>
+            <div style={{ fontSize: 'var(--fs-body-lg)', lineHeight: 1.55, color: 'var(--ink)' }}>
               {topSignal.message}
             </div>
-            <div style={{ marginTop: 10, fontSize: 11.5, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
+            <div style={{ marginTop: 'var(--space-3)', fontSize: 'var(--fs-micro)', color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
               {new Date(topSignal.createdAt).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
               {' · '}
               {topSignal.deliveredViaTelegram ? 'sent to telegram' : 'in-app'}
@@ -128,12 +130,12 @@ export default function Patterns() {
                 50% { opacity: 0.5; transform: scale(1.4); }
               }
             `}</style>
-          </div>
+          </Card>
         )}
 
         {/* Heatmap */}
-        <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, padding: 20, marginBottom: 24 }}>
-          <div className="label" style={{ marginBottom: 12 }}>Logging Streak — Last 28 Days</div>
+        <Card variant="outline" pad="md" style={{ marginBottom: 'var(--space-6)' }}>
+          <div className="label" style={{ marginBottom: 'var(--space-3)' }}>Logging Streak — Last 28 Days</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
             {last28.map((date, i) => {
               const logged = uniqueDates.includes(date)
@@ -152,23 +154,23 @@ export default function Patterns() {
               )
             })}
           </div>
-          <div style={{ marginTop: 12, fontSize: 13, color: 'var(--muted)', display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ marginTop: 'var(--space-3)', fontSize: 'var(--fs-small)', color: 'var(--muted)', display: 'flex', justifyContent: 'space-between' }}>
             <span>You've logged on <b style={{ color: 'var(--ink)' }}>{daysLogged}</b> day{daysLogged !== 1 ? 's' : ''}</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
               <span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--sage-700)', display: 'inline-block' }} />
               Logged
               <span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--border)', opacity: 0.4, display: 'inline-block' }} />
               Missed
             </span>
           </div>
-        </div>
+        </Card>
 
         {/* Daily calorie trend — last 14 days. Always visible, even with <3 days */}
         {hasEnoughData && (
-          <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, padding: 20, marginBottom: 24 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
+          <Card variant="outline" pad="md" style={{ marginBottom: 'var(--space-6)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 'var(--space-4)' }}>
               <div className="label">Daily Calories — Last 14 Days</div>
-              <div className="mono" style={{ fontSize: 11, color: 'var(--muted)', letterSpacing: 0.5 }}>
+              <div className="mono" style={{ fontSize: 'var(--fs-label)', color: 'var(--muted)', letterSpacing: 0.5 }}>
                 avg {Math.round(last14.filter(d => d.total > 0).reduce((s, d) => s + d.total, 0) / Math.max(1, last14.filter(d => d.total > 0).length))} cal
               </div>
             </div>
@@ -191,98 +193,96 @@ export default function Patterns() {
                 )
               })}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 10, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 'var(--space-2)', fontSize: 'var(--fs-label)', color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
               <span>{last14[0].monthDay}</span>
               <span>today</span>
             </div>
-          </div>
+          </Card>
         )}
 
         {!hasEnoughData && (
-          <div style={{ background: 'var(--sand)', borderRadius: 16, padding: 28, textAlign: 'center', marginBottom: 24 }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>📊</div>
-            <div className="serif" style={{ fontSize: 22, marginBottom: 8, letterSpacing: '-0.01em' }}>
-              Log {3 - daysLogged} more day{3 - daysLogged !== 1 ? 's' : ''} to unlock patterns
-            </div>
-            <div style={{ fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.55, maxWidth: 380, margin: '0 auto' }}>
-              Three days is the minimum we need to see honest patterns. Two meals tells us very little; a week tells us everything. Once you cross the line, this page automatically shows your trends + AI insights.
-            </div>
+          <div style={{ marginBottom: 'var(--space-6)' }}>
+            <EmptyState
+              icon="📊"
+              title={`Log ${3 - daysLogged} more day${3 - daysLogged !== 1 ? 's' : ''} to unlock patterns`}
+              helper="Three days is the minimum we need to see honest patterns. Two meals tells us very little; a week tells us everything. Once you cross the line, this page automatically shows your trends + AI insights."
+            />
           </div>
         )}
 
         {hasEnoughData && loading && !result && (
-          <div style={{ background: 'var(--sage-100)', borderRadius: 16, padding: 24, textAlign: 'center', marginBottom: 24 }}>
-            <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 14 }}>
+          <Card variant="sage" pad="lg" style={{ marginBottom: 'var(--space-6)', textAlign: 'center' }}>
+            <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', marginBottom: 'var(--space-4)' }}>
               {[0, 1, 2].map(i => (
                 <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--sage-700)', animation: `bounce 1.1s ${i * 0.15}s infinite ease-in-out` }} />
               ))}
             </div>
-            <div className="serif" style={{ fontSize: 18, marginBottom: 4, letterSpacing: '-0.005em' }}>
+            <div className="serif" style={{ fontSize: 'var(--fs-h3)', marginBottom: 'var(--space-1)' }}>
               Reading {daysLogged} days of meals…
             </div>
-            <div style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+            <div style={{ fontSize: 'var(--fs-small)', color: 'var(--ink-2)' }}>
               Surfacing your patterns + one small thing to try this week.
             </div>
-          </div>
+          </Card>
         )}
 
         {hasEnoughData && error && !loading && (
-          <div style={{ background: 'var(--red-bg, #FDF2F2)', border: '1px solid var(--red-br, #F5D0D0)', borderRadius: 12, padding: 16, marginBottom: 24, textAlign: 'center' }}>
-            <div style={{ color: 'var(--red, #B91C1C)', fontSize: 14, marginBottom: 10 }}>{error}</div>
+          <Card pad="md" style={{ marginBottom: 'var(--space-6)', background: 'var(--red-bg)', border: '1px solid var(--red-br)', textAlign: 'center' }}>
+            <div style={{ color: 'var(--red)', fontSize: 'var(--fs-body)', marginBottom: 'var(--space-3)' }}>{error}</div>
             <button onClick={handleAnalyze} className="btn btn-secondary btn-sm">
               Retry
             </button>
-          </div>
+          </Card>
         )}
 
         {result && (
           <div>
             {result.weeklyInsight && (
-              <div style={{ background: 'var(--sage-100)', borderRadius: 16, padding: 20, marginBottom: 20 }}>
-                <div style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--ink-2)' }}>{result.weeklyInsight}</div>
-              </div>
+              <Card variant="sage" pad="md" style={{ marginBottom: 'var(--space-5)' }}>
+                <div style={{ fontSize: 'var(--fs-body)', lineHeight: 1.7, color: 'var(--ink-2)' }}>{result.weeklyInsight}</div>
+              </Card>
             )}
 
             {result.topPatterns.length > 0 && (
-              <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, padding: 20, marginBottom: 16 }}>
-                <div className="label" style={{ marginBottom: 12 }}>Patterns Spotted</div>
+              <Card variant="outline" pad="md" style={{ marginBottom: 'var(--space-4)' }}>
+                <div className="label" style={{ marginBottom: 'var(--space-3)' }}>Patterns Spotted</div>
                 {result.topPatterns.map((p, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 10, fontSize: 14, lineHeight: 1.6 }}>
+                  <div key={i} style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-3)', fontSize: 'var(--fs-body)', lineHeight: 1.6 }}>
                     <span style={{ color: 'var(--muted)', minWidth: 20 }}>{i + 1}.</span>
                     <span style={{ color: 'var(--ink-2)' }}>{p}</span>
                   </div>
                 ))}
-              </div>
+              </Card>
             )}
 
             {(result.wins.length > 0 || result.improvements.length > 0) && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, padding: 20 }}>
-                  <div className="label" style={{ marginBottom: 12, color: 'var(--sage-700)' }}>Wins</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
+                <Card variant="outline" pad="md">
+                  <div className="label" style={{ marginBottom: 'var(--space-3)', color: 'var(--sage-700)' }}>Wins</div>
                   {result.wins.map((w, i) => (
-                    <div key={i} style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 6, color: 'var(--ink-2)' }}>
-                      <span style={{ marginRight: 6 }}>✓</span>{w}
+                    <div key={i} style={{ fontSize: 'var(--fs-small)', lineHeight: 1.6, marginBottom: 'var(--space-1)', color: 'var(--ink-2)' }}>
+                      <span style={{ marginRight: 'var(--space-1)' }}>✓</span>{w}
                     </div>
                   ))}
-                </div>
-                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, padding: 20 }}>
-                  <div className="label" style={{ marginBottom: 12 }}>Improve</div>
+                </Card>
+                <Card variant="outline" pad="md">
+                  <div className="label" style={{ marginBottom: 'var(--space-3)' }}>Improve</div>
                   {result.improvements.map((imp, i) => (
-                    <div key={i} style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 6, color: 'var(--ink-2)' }}>
-                      <span style={{ marginRight: 6 }}>→</span>{imp}
+                    <div key={i} style={{ fontSize: 'var(--fs-small)', lineHeight: 1.6, marginBottom: 'var(--space-1)', color: 'var(--ink-2)' }}>
+                      <span style={{ marginRight: 'var(--space-1)' }}>→</span>{imp}
                     </div>
                   ))}
-                </div>
+                </Card>
               </div>
             )}
 
             {result.streakMessage && (
-              <div style={{ background: 'var(--sand)', borderRadius: 12, padding: 16, fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.6, marginBottom: 16 }}>
+              <Card variant="sand" pad="md" style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--fs-body)', color: 'var(--ink-2)', lineHeight: 1.6 }}>
                 {result.streakMessage}
-              </div>
+              </Card>
             )}
 
-            <button onClick={handleAnalyze} disabled={loading} className="btn-secondary" style={{ width: '100%' }}>
+            <button onClick={handleAnalyze} disabled={loading} className="btn btn-secondary" style={{ width: '100%' }}>
               {loading ? 'Re-analyzing…' : 'Refresh Analysis'}
             </button>
           </div>
