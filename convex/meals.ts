@@ -33,7 +33,11 @@ export const logMeal = mutation({
     await ctx.scheduler.runAfter(0, internal.nudges.queue.enqueue, {
       userId,
       type: "meal_logged",
-      payload: { mealType: args.mealType, totalCal: args.totalCal },
+      payload: {
+        mealType: args.mealType,
+        totalCal: args.totalCal,
+        itemNames: args.items.map((i) => i.name),
+      },
     });
     return mealId;
   },
@@ -81,7 +85,11 @@ export const logMealForUser = internalMutation({
     await ctx.scheduler.runAfter(0, internal.nudges.queue.enqueue, {
       userId,
       type: "meal_logged",
-      payload: { mealType: args.mealType, totalCal: args.totalCal },
+      payload: {
+        mealType: args.mealType,
+        totalCal: args.totalCal,
+        itemNames: args.items.map((i) => i.name),
+      },
     });
     return mealId;
   },

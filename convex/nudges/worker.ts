@@ -139,15 +139,22 @@ export const processSingleEvent = internalAction({
       return;
     }
 
-    const cap = frequencyCapForPlan(state.plan);
-    if (!withinFrequencyCap(state.notifsLast24h, cap)) {
-      await ctx.runMutation(internal.nudges.worker.skipEvent, { eventId, reason: "cap" });
-      return;
-    }
+    // post-meal-insight is the per-meal "buddy insight" that should always
+    // fire — bypasses both the daily frequency cap and the 12h bucket dedup.
+    // Free + paid both get every-meal feedback. Other triggers still respect
+    // the cap so daily prompts / re-engagement don't spam.
+    const isUnthrottled = match.trigger === "post-meal-insight";
 
-    if (!passesBucketDedup(state.lastBucketTimestamps[match.bucket], now)) {
-      await ctx.runMutation(internal.nudges.worker.skipEvent, { eventId, reason: "dedup" });
-      return;
+    if (!isUnthrottled) {
+      const cap = frequencyCapForPlan(state.plan);
+      if (!withinFrequencyCap(state.notifsLast24h, cap)) {
+        await ctx.runMutation(internal.nudges.worker.skipEvent, { eventId, reason: "cap" });
+        return;
+      }
+      if (!passesBucketDedup(state.lastBucketTimestamps[match.bucket], now)) {
+        await ctx.runMutation(internal.nudges.worker.skipEvent, { eventId, reason: "dedup" });
+        return;
+      }
     }
 
     const signal = computeSignal(match.trigger, state);
@@ -174,6 +181,8 @@ export const processSingleEvent = internalAction({
 
     const lastMealName = (event.payload?.mealName as string | undefined) ?? undefined;
     const repeatedFood = (event.payload?.foodName as string | undefined) ?? undefined;
+    const mealItems = (event.payload?.itemNames as string[] | undefined) ?? undefined;
+    const mealCal = (event.payload?.totalCal as number | undefined) ?? undefined;
     const written = await writeNudge({
       name: state.name,
       goal: state.goal,
@@ -184,6 +193,11 @@ export const processSingleEvent = internalAction({
       food: repeatedFood,
       weightKg: state.weightKg,
       calorieGoal: state.calorieGoal,
+      // Rich per-meal context — used by post-meal-insight prompt
+      mealItems,
+      mealCal,
+      totalCalToday: state.totalCalToday,
+      dietType: state.dietType,
     });
 
     let expiresAt: number | undefined;

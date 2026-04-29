@@ -24,16 +24,37 @@ describe("matchTrigger", () => {
     expect(matchTrigger(event, state)?.bucket).toBe("movement");
   });
 
-  it("balanced lunch under 500 cal → returns null (skip)", () => {
+  it("balanced lunch under 500 cal → catchall post-meal-insight", () => {
     const event = mockEvent("meal_logged", { mealType: "lunch", totalCal: 400 });
     const state = mockUserState({ totalCalToday: 800, calorieGoal: 1800 });
-    expect(matchTrigger(event, state)).toBeNull();
+    expect(matchTrigger(event, state)).toEqual({
+      trigger: "post-meal-insight",
+      bucket: "reflection",
+    });
   });
 
-  it("scan_completed >600 cal → movement", () => {
+  it("scan_completed >600 cal → movement (post-scan-heavy still wins)", () => {
     const event = mockEvent("scan_completed", { totalCal: 700 });
     const state = mockUserState();
     expect(matchTrigger(event, state)?.bucket).toBe("movement");
+  });
+
+  it("scan_completed under 600 cal → catchall post-meal-insight", () => {
+    const event = mockEvent("scan_completed", { totalCal: 350 });
+    const state = mockUserState();
+    expect(matchTrigger(event, state)).toEqual({
+      trigger: "post-meal-insight",
+      bucket: "reflection",
+    });
+  });
+
+  it("water_check_time → hydration/water-check", () => {
+    const event = mockEvent("water_check_time");
+    const state = mockUserState();
+    expect(matchTrigger(event, state)).toEqual({
+      trigger: "water-check",
+      bucket: "hydration",
+    });
   });
 
   it("time_breakfast_check with no breakfast → prompt", () => {

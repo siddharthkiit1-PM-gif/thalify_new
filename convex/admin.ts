@@ -7,6 +7,66 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 const PERSONAL_ADMIN_EMAIL = "agrawalsiddharth66@gmail.com";
 
 /**
+ * Diagnostic: why are Telegram nudges not landing for a given user?
+ * Returns telegram-binding state + last 10 events + last 10 notifications.
+ *
+ * Call: npx convex run admin:diagnoseNudgesForEmail --prod '{"email":"x@y.com"}'
+ */
+export const diagnoseNudgesForEmail = internalQuery({
+  args: { email: v.string() },
+  handler: async (ctx, { email }) => {
+    const normalized = email.toLowerCase().trim();
+    const user = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("email"), normalized))
+      .first();
+    if (!user) return { error: "no user with that email" };
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .unique();
+
+    const events = await ctx.db
+      .query("nudgeEvents")
+      .withIndex("by_userId_createdAt", (q) => q.eq("userId", user._id))
+      .order("desc")
+      .take(10);
+
+    const notifs = await ctx.db
+      .query("notifications")
+      .withIndex("by_userId_createdAt", (q) => q.eq("userId", user._id))
+      .order("desc")
+      .take(10);
+
+    return {
+      user: { _id: user._id, email: user.email, name: user.name },
+      telegram: {
+        optIn: profile?.telegramOptIn === true,
+        chatId: profile?.telegramChatId ?? null,
+      },
+      plan: profile?.plan ?? "free",
+      events: events.map((e) => ({
+        type: e.type,
+        status: e.status,
+        skipReason: e.skipReason ?? null,
+        createdAt: new Date(e.createdAt).toISOString(),
+        processedAt: e.processedAt ? new Date(e.processedAt).toISOString() : null,
+      })),
+      notifications: notifs.map((n) => ({
+        bucket: n.bucket,
+        trigger: n.trigger,
+        message: n.message.slice(0, 120),
+        deliveredViaTelegram: n.deliveredViaTelegram === true,
+        deliveredViaWhatsApp: n.deliveredViaWhatsApp === true,
+        createdAt: new Date(n.createdAt).toISOString(),
+        aiFallback: n.aiFallback === true,
+      })),
+    };
+  },
+});
+
+/**
  * Personal-admin daily stats. CLI-callable bypassing auth.
  *
  * Call via: npx convex run admin:dailyActiveUsersInternal --prod

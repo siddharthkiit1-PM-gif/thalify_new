@@ -65,6 +65,22 @@ const SEED_TEMPLATES: Seed[] = [
   { bucket: "plan", trigger: "weekend-plan", variant: "wp-v1", template: "Weekend, {name} — eat well, walk more. One indulgent meal is fine; just log it." },
   { bucket: "plan", trigger: "post-doctor-plan", variant: "pdp-v1", template: "After your doctor visit, {name}, focus on consistency over perfection. One meal at a time." },
 
+  // Per-meal buddy insight — fires on every meal_logged + scan_completed
+  // (catchall in matchTrigger), bypasses cap + dedup. AI rewrites with the
+  // user's actual meal items, day's macros, goal, and diet. Fallbacks below
+  // only fire if Gemini errors.
+  { bucket: "reflection", trigger: "post-meal-insight", variant: "pmi-v1", template: "Logged it, {name}. Pair this with a glass of water now and a slow 5-min walk — keeps the next meal honest." },
+  { bucket: "reflection", trigger: "post-meal-insight", variant: "pmi-v2", template: "Got it, {name}. Aim for a balanced dal-sabzi-roti at the next meal — protein and fiber close out the day clean." },
+  { bucket: "reflection", trigger: "post-meal-insight", variant: "pmi-v3", template: "Noted, {name}. If protein's lagging today, add 1 katori curd or 1 boiled egg at the next meal." },
+  { bucket: "reflection", trigger: "post-meal-insight", variant: "pmi-v4", template: "Logged. Quick tip, {name} — sip water before chai, and if you're heavy, a 10-min walk now beats sitting." },
+  { bucket: "reflection", trigger: "post-meal-insight", variant: "pmi-v5", template: "{name}, this lands well. Aim for sprouts or moong dal at the next meal to round out the protein side." },
+  { bucket: "reflection", trigger: "post-meal-insight", variant: "pmi-v6", template: "Got that meal in, {name}. Hydrate now — 2 glasses of water in the next hour makes the difference." },
+
+  // Water reminders — 2x daily cron (noon + 6pm IST). Friendly nudge.
+  { bucket: "hydration", trigger: "water-check", variant: "wc-v1", template: "Quick one, {name} — had any water yet? Aim for 8 glasses by tonight, easier than it sounds." },
+  { bucket: "hydration", trigger: "water-check", variant: "wc-v2", template: "{name}, water check. Two glasses now and you're cruising — gut, skin, energy all thank you." },
+  { bucket: "hydration", trigger: "water-check", variant: "wc-v3", template: "Pause for water, {name}. Indian summers, indoor heat — you're losing more than you think." },
+
   // Upgrade prompt — only fires for free users who've logged 3+ days, with a
   // 7-day cooldown. Templates carry the /upgrade link so Telegram users can
   // tap straight to checkout.

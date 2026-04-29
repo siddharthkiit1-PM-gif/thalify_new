@@ -17,6 +17,7 @@ export const enqueue = internalMutation({
       v.literal("daily_log_prompt"),
       v.literal("food_repetition_detected"),
       v.literal("upgrade_prompt"),
+      v.literal("water_check_time"),
     ),
     payload: v.optional(v.any()),
   },

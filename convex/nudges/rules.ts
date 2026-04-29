@@ -31,7 +31,10 @@ export function matchTrigger(event: MockEvent, state: MockUserState): TriggerMat
       if ((mealType === "breakfast" || mealType === "lunch") && totalCal > HEAVY_MEAL_CAL) {
         return { trigger: "post-meal-heavy", bucket: "movement" };
       }
-      return null;
+      // Catchall — every other meal log still gets a personalized AI insight.
+      // Bypasses bucket-dedup + frequency-cap in the worker, so this fires
+      // every single meal_logged event for both free and paid users.
+      return { trigger: "post-meal-insight", bucket: "reflection" };
     }
 
     case "scan_completed": {
@@ -39,8 +42,12 @@ export function matchTrigger(event: MockEvent, state: MockUserState): TriggerMat
       if (totalCal > HEAVY_SCAN_CAL) {
         return { trigger: "post-scan-heavy", bucket: "movement" };
       }
-      return null;
+      // Catchall — same logic as meal_logged. Every scan deserves feedback.
+      return { trigger: "post-meal-insight", bucket: "reflection" };
     }
+
+    case "water_check_time":
+      return { trigger: "water-check", bucket: "hydration" };
 
     case "time_breakfast_check":
       return state.hasBreakfastToday

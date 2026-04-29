@@ -11,6 +11,11 @@ export type WriterContext = {
   food?: string;
   weightKg?: number;
   calorieGoal?: number;
+  // Rich per-meal context — used by the post-meal-insight prompt
+  mealItems?: string[];
+  mealCal?: number;
+  totalCalToday?: number;
+  dietType?: string;
 };
 
 export type WriterResult = {
@@ -34,6 +39,25 @@ RULES:
 5. Indian context welcome: katori, roti, chai, dal, paneer, etc.
 6. NEVER prescribe medication. NEVER mention lab values.
 7. Output ONLY the message text. No quotes, no preamble, no markdown.`;
+
+// Specialized prompt for the per-meal "buddy insight" nudge. Uses the full
+// meal context (items, cal, day's totals, goal, diet) to produce a
+// concrete next-step suggestion in Indian-food vocabulary. Output is a
+// 1-2 line message, sent via the same Telegram + in-app channels.
+const POST_MEAL_INSIGHT_SYSTEM_PROMPT = `You are Health Buddy — a personal Indian nutrition coach.
+
+A user just logged a meal. Generate a buddy insight that references what they ate AND what their next move should be — based on their goal, diet type, day's calories so far, and the gap to their target.
+
+RULES:
+1. Reference the actual food they ate (by name) — never invent dishes they didn't have.
+2. Suggest one specific Indian-food next-step (e.g., "1 katori curd at lunch" or "5-min walk + glass of water"), not generic advice like "eat more protein".
+3. Use their first name once, naturally, not at the start.
+4. 1-2 sentences. Tight.
+5. Vocabulary: katori, roti, dal, paneer, sabzi, chai, idli, sambar, paratha, khichdi, sprouts, curd, biryani, etc.
+6. If they're under target, encourage a balanced next meal. If close to target, suggest a light next move. If over, a recovery move.
+7. NO fluff: "Great choice!", "I understand", "As your coach", "Remember to...". Skip the warm-up.
+8. NEVER prescribe medication or mention lab values.
+9. Output ONLY the message text. No quotes, no preamble, no markdown.`;
 
 /**
  * Used only when the AI rewriter fails (Gemini throttle, quota, network).
@@ -74,7 +98,27 @@ function fallback(
 }
 
 export async function writeNudge(ctx: WriterContext): Promise<WriterResult> {
-  const userPrompt = `Rewrite this template:
+  const isPostMealInsight = ctx.trigger === "post-meal-insight";
+
+  // Build the user-prompt body. Post-meal-insight uses a richer context
+  // block so the AI can ground its suggestion in macros + diet + the
+  // actual items the user ate.
+  const userPrompt = isPostMealInsight
+    ? `User just logged a meal.
+- Name: ${ctx.name}
+- Goal: ${ctx.goal}${ctx.dietType ? ` · diet: ${ctx.dietType}` : ""}
+${ctx.calorieGoal ? `- Daily target: ${ctx.calorieGoal} kcal` : ""}
+${ctx.totalCalToday !== undefined ? `- Total today including this meal: ${ctx.totalCalToday} kcal` : ""}
+${ctx.calorieGoal && ctx.totalCalToday !== undefined ? `- Remaining: ${ctx.calorieGoal - ctx.totalCalToday} kcal` : ""}
+${ctx.weightKg ? `- Weight: ${ctx.weightKg} kg` : ""}
+${ctx.mealItems && ctx.mealItems.length > 0 ? `- Just ate: ${ctx.mealItems.join(", ")}` : ctx.lastMealName ? `- Just ate: ${ctx.lastMealName}` : ""}
+${ctx.mealCal !== undefined ? `- This meal: ${ctx.mealCal} kcal` : ""}
+
+Template hint (use the tone/intent, but rewrite based on real context above):
+"${ctx.template}"
+
+Output: just the buddy-insight message — 1 to 2 lines, specific and Indian-food native.`
+    : `Rewrite this template:
 "${ctx.template}"
 
 Context:
@@ -97,7 +141,7 @@ Output: just the rewritten line.`;
 
   try {
     const text = await generateText({
-      system: SYSTEM_PROMPT,
+      system: isPostMealInsight ? POST_MEAL_INSIGHT_SYSTEM_PROMPT : SYSTEM_PROMPT,
       messages: [{ role: "user", content: userPrompt }],
       maxTokens: 150,
     });
