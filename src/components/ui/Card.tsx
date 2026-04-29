@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode, MouseEvent } from 'react'
 
-type Variant = 'sand' | 'cream' | 'sage' | 'outline'
+type Variant = 'sand' | 'cream' | 'sage' | 'outline' | 'hairline'
 type Pad = 'sm' | 'md' | 'lg'
 
 interface Props {
@@ -24,6 +24,7 @@ const BG: Record<Variant, string> = {
   cream: 'var(--cream)',
   sage: 'var(--sage-100)',
   outline: 'var(--cream)',
+  hairline: 'transparent',
 }
 
 export default function Card({ children, variant = 'sand', pad = 'md', className, style, onClick, as = 'div' }: Props) {
@@ -34,11 +35,11 @@ export default function Card({ children, variant = 'sand', pad = 'md', className
       onClick={onClick}
       style={{
         background: BG[variant],
-        border: variant === 'outline' ? '1px solid var(--border)' : 'none',
-        borderRadius: 'var(--radius-md)',
+        border: variant === 'outline' || variant === 'hairline' ? 'var(--hairline)' : 'none',
+        borderRadius: variant === 'hairline' ? 'var(--radius-sm)' : 'var(--radius-md)',
         padding: PADS[pad],
         cursor: onClick ? 'pointer' : undefined,
-        transition: onClick ? 'transform 0.15s ease, box-shadow 0.15s ease' : undefined,
+        transition: onClick ? 'transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease' : undefined,
         ...style,
       }}
     >
