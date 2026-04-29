@@ -38,6 +38,7 @@ import type * as nudges_signal from "../nudges/signal.js";
 import type * as nudges_signalSeeders from "../nudges/signalSeeders.js";
 import type * as nudges_templatePicker from "../nudges/templatePicker.js";
 import type * as nudges_timeSeeders from "../nudges/timeSeeders.js";
+import type * as nudges_weeklyStats from "../nudges/weeklyStats.js";
 import type * as nudges_worker from "../nudges/worker.js";
 import type * as passwordHistory from "../passwordHistory.js";
 import type * as passwordReset from "../passwordReset.js";
@@ -96,6 +97,7 @@ declare const fullApi: ApiFromModules<{
   "nudges/signalSeeders": typeof nudges_signalSeeders;
   "nudges/templatePicker": typeof nudges_templatePicker;
   "nudges/timeSeeders": typeof nudges_timeSeeders;
+  "nudges/weeklyStats": typeof nudges_weeklyStats;
   "nudges/worker": typeof nudges_worker;
   passwordHistory: typeof passwordHistory;
   passwordReset: typeof passwordReset;

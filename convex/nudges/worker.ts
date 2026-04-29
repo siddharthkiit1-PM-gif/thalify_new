@@ -189,6 +189,17 @@ export const processSingleEvent = internalAction({
     const repeatedFood = (event.payload?.foodName as string | undefined) ?? undefined;
     const mealItems = (event.payload?.itemNames as string[] | undefined) ?? undefined;
     const mealCal = (event.payload?.totalCal as number | undefined) ?? undefined;
+
+    // Pull 7-day aggregates only for the weekly recap. Cheap query, single
+    // user, no per-tick cost for any other trigger.
+    let weeklyStats: import("./weeklyStats").WeeklyStats | undefined;
+    if (match.trigger === "weekly-recap") {
+      weeklyStats = await ctx.runQuery(
+        internal.nudges.weeklyStats.getWeeklyStatsForUser,
+        { userId: event.userId },
+      );
+    }
+
     const written = await writeNudge({
       name: state.name,
       goal: state.goal,
@@ -204,6 +215,8 @@ export const processSingleEvent = internalAction({
       mealCal,
       totalCalToday: state.totalCalToday,
       dietType: state.dietType,
+      // 7-day aggregates — used by weekly-recap prompt
+      weeklyStats,
     });
 
     let expiresAt: number | undefined;

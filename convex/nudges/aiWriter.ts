@@ -16,6 +16,22 @@ export type WriterContext = {
   mealCal?: number;
   totalCalToday?: number;
   dietType?: string;
+  // 7-day aggregates — used by the weekly-recap prompt
+  weeklyStats?: {
+    daysLogged: number;
+    totalDays: number;
+    calorieGoal: number;
+    proteinGoal: number;
+    avgCalPerLoggedDay: number;
+    avgProteinPerLoggedDay: number;
+    daysUnderTarget: number;
+    daysOnTarget: number;
+    daysOverTarget: number;
+    totalMeals: number;
+    topFoods: { name: string; count: number }[];
+    bestDay: { date: string; totalCal: number } | null;
+    worstDay: { date: string; totalCal: number; over: number } | null;
+  };
 };
 
 export type WriterResult = {
@@ -58,6 +74,30 @@ RULES:
 7. NO fluff: "Great choice!", "I understand", "As your coach", "Remember to...". Skip the warm-up.
 8. NEVER prescribe medication or mention lab values.
 9. Output ONLY the message text. No quotes, no preamble, no markdown.`;
+
+// Specialized weekly-recap prompt — driven by real 7-day aggregates
+// (days logged, avg cal, protein gap, top foods, best/worst day) so
+// the message names a specific finding and prescribes one concrete
+// next-week action. Replaces the previous template-rewrite recap.
+const WEEKLY_RECAP_SYSTEM_PROMPT = `You are Health Buddy delivering a Sunday weekly insight to the user.
+
+You will be given real numbers from their last 7 days of meal logs. Your job: turn those numbers into a 2-3 line evidence-based recap that PROVOKES action.
+
+Structure the message:
+1. Headline finding (1 line) — name the most important pattern: how many days they logged, the calorie or protein gap, OR a streak. Be specific: "5 of 7 days under target" beats "good week".
+2. Cause + effect (optional, if it adds info) — connect the data to a specific food. "Avg protein still 60g vs 90g — paratha-rice combo dominated 4 days."
+3. ONE concrete next-week action (always) — a specific Indian-food swap or addition, never generic advice. "Try sprouts + curd at lunch 3 days this week" beats "eat more protein".
+
+RULES:
+- Use their first name once, naturally — not at the start.
+- Reference at LEAST one number from the data (days logged, avg cal, protein, top food).
+- Indian-food vocabulary: katori, dal, paneer, sabzi, sprouts, curd, idli, sambar, paratha, khichdi, etc.
+- NO clichés: "Great job!", "Keep going!", "Remember to…", "It's important to…".
+- 2-3 short sentences. Every word earns its place.
+- If they logged 0 or 1 day this week, lead with empathy, then ONE small action: "Long week — let's get 3 days logged next week, even if it's just chai-and-toast."
+- NEVER prescribe medication or mention lab values.
+
+Output ONLY the message — no preamble, no quotes, no markdown.`;
 
 // Specialized water-reminder prompt — each nudge is unique to the user's
 // state (goal, macros so far, time of day) so two users never get the
@@ -132,14 +172,35 @@ function getISTHourLocal(): number {
 export async function writeNudge(ctx: WriterContext): Promise<WriterResult> {
   const isPostMealInsight = ctx.trigger === "post-meal-insight";
   const isWaterCheck = ctx.trigger === "water-check";
+  const isWeeklyRecap = ctx.trigger === "weekly-recap";
   const istHour = getISTHourLocal();
   const timeLabel = describeISTHour(istHour);
 
   // Build the user-prompt body. Post-meal-insight uses a richer context
   // block so the AI can ground its suggestion in macros + diet + the
   // actual items the user ate. Water-check gets a dedicated prompt that
-  // ties the reminder to the user's day-state + time of day.
-  const userPrompt = isWaterCheck
+  // ties the reminder to the user's day-state + time of day. Weekly-recap
+  // gets the full 7-day aggregate so the AI writes a real evidence-based
+  // recap, not a feel-good vibe.
+  const userPrompt = isWeeklyRecap
+    ? `Weekly stats for ${ctx.name} (last 7 days):
+- Days logged: ${ctx.weeklyStats?.daysLogged ?? 0} / ${ctx.weeklyStats?.totalDays ?? 7}
+- Total meals tracked: ${ctx.weeklyStats?.totalMeals ?? 0}
+- Avg cal per logged day: ${ctx.weeklyStats?.avgCalPerLoggedDay ?? 0} (target ${ctx.weeklyStats?.calorieGoal ?? 1800})
+- Avg protein per logged day: ${ctx.weeklyStats?.avgProteinPerLoggedDay ?? 0}g (target ${ctx.weeklyStats?.proteinGoal ?? 90}g)
+- Days under target: ${ctx.weeklyStats?.daysUnderTarget ?? 0}
+- Days on target: ${ctx.weeklyStats?.daysOnTarget ?? 0}
+- Days over target: ${ctx.weeklyStats?.daysOverTarget ?? 0}
+- Top foods this week: ${ctx.weeklyStats?.topFoods?.map((f) => `${f.name} (×${f.count})`).join(", ") || "none"}
+${ctx.weeklyStats?.bestDay ? `- Best day (closest to goal): ${ctx.weeklyStats.bestDay.date} · ${ctx.weeklyStats.bestDay.totalCal} cal` : ""}
+${ctx.weeklyStats?.worstDay ? `- Worst overshoot: ${ctx.weeklyStats.worstDay.date} · ${ctx.weeklyStats.worstDay.totalCal} cal (${ctx.weeklyStats.worstDay.over}+ over)` : ""}
+- Goal: ${ctx.goal}${ctx.dietType ? ` · diet: ${ctx.dietType}` : ""}
+
+Template hint (use the tone, ignore the wording — write from the data):
+"${ctx.template}"
+
+Output: 2-3 line weekly recap. Cite at least one number. Prescribe one specific next-week action.`
+    : isWaterCheck
     ? `Water reminder context:
 - Name: ${ctx.name}
 - Goal: ${ctx.goal}${ctx.dietType ? ` · diet: ${ctx.dietType}` : ""}
@@ -190,11 +251,13 @@ Output: just the rewritten line.`;
 
   try {
     const text = await generateText({
-      system: isWaterCheck
-        ? WATER_CHECK_SYSTEM_PROMPT
-        : isPostMealInsight
-          ? POST_MEAL_INSIGHT_SYSTEM_PROMPT
-          : SYSTEM_PROMPT,
+      system: isWeeklyRecap
+        ? WEEKLY_RECAP_SYSTEM_PROMPT
+        : isWaterCheck
+          ? WATER_CHECK_SYSTEM_PROMPT
+          : isPostMealInsight
+            ? POST_MEAL_INSIGHT_SYSTEM_PROMPT
+            : SYSTEM_PROMPT,
       messages: [{ role: "user", content: userPrompt }],
       maxTokens: 150,
     });
