@@ -1,21 +1,17 @@
 /**
  * Password-reuse guard.
  *
- * We keep the last 5 salted SHA-256 hashes of each user's plaintext passwords.
- * On reset, the candidate password is hashed against each stored salt; if any
- * matches, we reject the reset before it touches the auth library's own
- * password store.
+ * Stores the last 5 PBKDF2-SHA256 hashes of each user's plaintext passwords.
+ * On reset, candidate is hashed against each stored salt; any match → reject.
  *
- * Why a separate store from `@convex-dev/auth`'s password hash:
- *   - Their hash is bcrypt/scrypt-style and one-way for the *current* password
- *     only — there's no API to read past password hashes from there.
- *   - We need a "have we seen this exact plaintext before?" check, which means
- *     we must store our own hash per password change, regardless.
+ * Why a separate store from @convex-dev/auth's password hash: their hash is
+ * one-way for the *current* password only — no API for past hashes. We need
+ * "have we seen this plaintext before?", which means our own per-change hash.
  *
- * Security shape: SHA-256(password + per-entry salt). Salt prevents rainbow
- * tables across users; per-entry salt also means re-using the *same* password
- * yields different hashes across rows so we have to compare per-salt at check
- * time. If the DB leaks, an attacker still has to brute-force per-user.
+ * PBKDF2 100k iterations + per-entry random salt: makes brute-force per user
+ * ~100,000× more expensive than a plain hash if the DB ever leaks. Per-entry
+ * salt prevents same-password-twice → same-hash leakage and limits blast
+ * radius if any single salt is exposed.
  */
 
 import { action, internalMutation, internalQuery } from "./_generated/server";
@@ -26,6 +22,8 @@ import type { Id } from "./_generated/dataModel";
 
 const HISTORY_DEPTH = 5;
 const SALT_BYTES = 16;
+const PBKDF2_ITERATIONS = 100_000;
+const HASH_BITS = 256;
 
 function bytesToHex(bytes: Uint8Array): string {
   let out = "";
@@ -33,11 +31,34 @@ function bytesToHex(bytes: Uint8Array): string {
   return out;
 }
 
-async function hashWithSalt(password: string, salt: string): Promise<string> {
+function hexToBytes(hex: string): Uint8Array<ArrayBuffer> {
+  const out = new Uint8Array(new ArrayBuffer(hex.length / 2));
+  for (let i = 0; i < out.length; i++) {
+    out[i] = parseInt(hex.substr(i * 2, 2), 16);
+  }
+  return out;
+}
+
+async function hashWithSalt(password: string, saltHex: string): Promise<string> {
   const enc = new TextEncoder();
-  const data = enc.encode(password + salt);
-  const buf = await crypto.subtle.digest("SHA-256", data);
-  return bytesToHex(new Uint8Array(buf));
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(password),
+    { name: "PBKDF2" },
+    false,
+    ["deriveBits"],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: hexToBytes(saltHex),
+      iterations: PBKDF2_ITERATIONS,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    HASH_BITS,
+  );
+  return bytesToHex(new Uint8Array(bits));
 }
 
 function generateSalt(): string {
