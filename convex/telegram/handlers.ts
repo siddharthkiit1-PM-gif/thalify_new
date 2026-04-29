@@ -98,8 +98,7 @@ export const handleText = internalAction({
     // Meal-extract first. If the user typed a meal, route to the log flow.
     let extract:
       | { intent: "log_meal"; scanResultId: string; items: ScanItem[]; totalCal: number; totalProtein: number }
-      | { intent: "chat" }
-      | null = null;
+      | { intent: "chat" };
     try {
       extract = await ctx.runAction(internal.scan.extractMealFromTextAsUser, {
         userId: lookup.userId,
@@ -112,7 +111,7 @@ export const handleText = internalAction({
       extract = { intent: "chat" };
     }
 
-    if (extract && extract.intent === "log_meal") {
+    if (extract.intent === "log_meal") {
       const suggested = guessMealTypeFromIST();
       const summary = summariseScan(
         extract.items,
