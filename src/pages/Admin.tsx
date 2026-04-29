@@ -3,6 +3,7 @@ import { useQuery } from 'convex/react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../convex/_generated/api'
 import Navbar from '../components/Navbar'
+import Section from '../components/ui/Section'
 import { useIsMobile } from '../hooks/useIsMobile'
 
 type ScanItem = { name: string; portion: string; cal: number; protein: number; carbs: number; fat: number }
@@ -40,8 +41,12 @@ export default function Admin() {
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
       <Navbar />
       <div className="page" style={{ maxWidth: 1080 }}>
-        <h1 className="serif" style={{ fontSize: 28, marginBottom: 4 }}>Admin</h1>
-        <p style={{ color: 'var(--muted)', marginBottom: 20 }}>Daily engagement, customer base, and scan-quality review — all in one place.</p>
+        <Section
+          eyebrow="Admin · Internal"
+          title="Operations"
+          subtitle="Daily engagement, customer base, payments, scan quality — all in one place."
+          bottom="var(--space-6)"
+        />
 
         {dailyStats && (
           <div style={{ marginBottom: 24 }}>

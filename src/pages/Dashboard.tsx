@@ -4,6 +4,10 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../../convex/_generated/api'
 import Navbar from '../components/Navbar'
 import Progress from '../components/ui/Progress'
+import Card from '../components/ui/Card'
+import Section from '../components/ui/Section'
+import Badge from '../components/ui/Badge'
+import EmptyState from '../components/ui/EmptyState'
 import BodyStatsCard from '../components/BodyStatsCard'
 import NotificationBanner from '../components/NotificationBanner'
 import TelegramConnectModal from '../components/TelegramConnectModal'
@@ -51,84 +55,75 @@ export default function Dashboard() {
     ? "You've exceeded your goal today. Try a light dinner — khichdi or vegetable soup."
     : "You're on track! Keep going with a balanced dinner."
 
+  const heroEyebrow = `${greeting()} · ${new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}`
+  const heroTitle = currentUser?.name
+    ? <>Hi {currentUser.name.split(' ')[0]}, here's where you stand.</>
+    : <>Here's where you stand.</>
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
       <Navbar />
-      <div className="page" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 300px', gap: isMobile ? 16 : 28 }}>
+      <div className="page" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 300px', gap: isMobile ? 'var(--space-4)' : 'var(--space-7)' }}>
         <div>
-          <div data-eyebrow style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10 }}>
-            {greeting()} · {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
-          </div>
-          <h1 className="serif" style={{ fontSize: 36, marginBottom: 24, lineHeight: 1.1, letterSpacing: '-0.015em' }}>
-            {currentUser?.name ? <>Hi {currentUser.name.split(' ')[0]}, here's where you stand.</> : <>Here's where you stand.</>}
-          </h1>
+          <Section eyebrow={heroEyebrow} title={heroTitle} hero bottom="var(--space-7)" />
 
           <NotificationBanner />
 
-          {/* Founder offer — three states: admin (disabled message), free (clickable), other lifetime (hidden) */}
+          {/* Founder offer — admin (disabled), free (clickable), other lifetime (hidden) */}
           {profile && currentUser?.isAdmin ? (
-            <div
+            <Card
+              variant="cream"
+              pad="md"
               style={{
-                background: 'linear-gradient(135deg, var(--sand) 0%, var(--cream) 100%)',
+                marginBottom: 'var(--space-4)',
                 border: '1px dashed var(--sage-700)',
-                borderRadius: 14,
-                padding: '14px 18px',
-                marginBottom: 16,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 14,
                 opacity: 0.85,
                 cursor: 'not-allowed',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-4)',
               }}
-              aria-disabled
             >
               <div style={{ fontSize: 26 }}>🛠️</div>
               <div style={{ flex: 1 }}>
-                <div className="serif" style={{ fontSize: 17, color: 'var(--ink)', marginBottom: 2, letterSpacing: '-0.005em' }}>
+                <div className="serif" style={{ fontSize: 17, color: 'var(--ink)', marginBottom: 2 }}>
                   You're the admin — no need to pay
                 </div>
-                <div style={{ fontSize: 12.5, color: 'var(--ink-2)' }}>
+                <div style={{ fontSize: 'var(--fs-small)', color: 'var(--ink-2)' }}>
                   Lifetime access is on the house. Open <span style={{ color: 'var(--sage-700)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => navigate('/admin')}>/admin</span> for stats.
                 </div>
               </div>
-              <span style={{ fontSize: 14, fontFamily: 'var(--mono)', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>admin</span>
-            </div>
+              <Badge tone="neutral" mono>admin</Badge>
+            </Card>
           ) : profile && profile.plan !== 'lifetime' ? (
-            <div
+            <Card
+              variant="sage"
+              pad="md"
               onClick={() => navigate('/upgrade')}
               style={{
-                background: 'linear-gradient(135deg, var(--sage-100) 0%, #DCEFE0 100%)',
+                marginBottom: 'var(--space-4)',
                 border: '1px solid var(--sage-700)',
-                borderRadius: 14,
-                padding: '14px 18px',
-                marginBottom: 16,
-                cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 14,
-                transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                gap: 'var(--space-4)',
               }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(45,95,58,0.15)' }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}
             >
               <div style={{ fontSize: 26 }}>🌿</div>
               <div style={{ flex: 1 }}>
-                <div className="serif" style={{ fontSize: 17, color: 'var(--ink)', marginBottom: 2, letterSpacing: '-0.005em' }}>
+                <div className="serif" style={{ fontSize: 17, color: 'var(--ink)', marginBottom: 2 }}>
                   Become a Founder · ₹99 once, lifetime
                 </div>
-                <div style={{ fontSize: 12.5, color: 'var(--ink-2)' }}>
+                <div style={{ fontSize: 'var(--fs-small)', color: 'var(--ink-2)' }}>
                   3,000 AI actions every month, forever. Limited to first 50.
                 </div>
               </div>
               <span style={{ fontSize: 18, color: 'var(--sage-700)' }}>→</span>
-            </div>
+            </Card>
           ) : null}
 
           {profile && !profile.telegramOptIn && (
             <div className="tg-card">
-              <div className="tg-card-logo">
-                <TelegramLogo size={28} />
-              </div>
+              <div className="tg-card-logo"><TelegramLogo size={28} /></div>
               <div className="tg-card-body">
                 <h3 className="tg-card-title">Get gentle nudges in Telegram</h3>
                 <p className="tg-card-sub">One tap. No phone number, no codes. Free forever.</p>
@@ -143,83 +138,98 @@ export default function Dashboard() {
           <BodyStatsCard profile={profile as never} />
 
           {/* Calorie card */}
-          <div style={{ background: 'var(--sand)', borderRadius: 18, padding: 24, marginBottom: 16 }}>
-            <div className="label" style={{ marginBottom: 10 }}>Calories</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
-              <span className="mono" style={{ fontSize: 42, fontWeight: 700 }}>{totalCal.toLocaleString()}</span>
-              <span style={{ color: 'var(--muted)', fontSize: 14 }}>/ {calorieGoal.toLocaleString()} kcal</span>
+          <Card variant="sand" pad="lg" style={{ marginBottom: 'var(--space-4)' }}>
+            <div className="label" style={{ marginBottom: 'var(--space-3)' }}>Calories</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
+              <span className="mono" style={{ fontSize: 'var(--fs-display-1)', fontWeight: 700, lineHeight: 1 }}>{totalCal.toLocaleString()}</span>
+              <span style={{ color: 'var(--muted)', fontSize: 'var(--fs-body)' }}>/ {calorieGoal.toLocaleString()} kcal</span>
             </div>
             <Progress value={totalCal} max={calorieGoal} />
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 18 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-3)', marginTop: 'var(--space-5)' }}>
               {[['Protein', totalProtein, 'g'], ['Carbs', totalCarbs, 'g'], ['Fat', totalFat, 'g']].map(([label, val, unit]) => (
-                <div key={label as string} style={{ background: 'var(--cream)', borderRadius: 12, padding: '12px 14px' }}>
+                <Card key={label as string} variant="cream" pad="sm">
                   <div className="label">{label}</div>
-                  <div className="mono" style={{ fontSize: 22, fontWeight: 700 }}>
-                    {Math.round(val as number)}<span style={{ fontSize: 12, color: 'var(--muted)' }}>{unit}</span>
+                  <div className="mono" style={{ fontSize: 'var(--fs-h2)', fontWeight: 700 }}>
+                    {Math.round(val as number)}<span style={{ fontSize: 'var(--fs-micro)', color: 'var(--muted)' }}>{unit}</span>
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
-          </div>
+          </Card>
 
           {/* Coach insight */}
-          <div style={{ background: 'var(--sage-100)', borderRadius: 16, padding: 20, marginBottom: 16, borderLeft: '3px solid var(--sage-700)' }}>
-            <div className="label" style={{ color: 'var(--sage-700)', marginBottom: 6 }}>From your coach</div>
-            <div style={{ fontSize: 14.5, lineHeight: 1.65, color: 'var(--ink)' }}>{insightMsg}</div>
-          </div>
+          <Card
+            variant="sage"
+            pad="md"
+            style={{ marginBottom: 'var(--space-4)', borderLeft: '3px solid var(--sage-700)' }}
+          >
+            <div className="label" style={{ color: 'var(--sage-700)', marginBottom: 'var(--space-2)' }}>From your coach</div>
+            <div style={{ fontSize: 'var(--fs-body)', lineHeight: 1.65, color: 'var(--ink)' }}>{insightMsg}</div>
+          </Card>
 
           {/* Quick actions */}
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: 12, marginBottom: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: 'var(--space-3)', marginBottom: 'var(--space-6)' }}>
             {[
               ['📷', 'Scan Meal', '/scan'],
               ['💬', 'Health Buddy', '/chat'],
               ['🍛', 'Family', '/family'],
               ['🧪', 'Labs', '/lab'],
             ].map(([icon, label, path]) => (
-              <div key={label as string} onClick={() => navigate(path as string)}
-                style={{ background: 'var(--sand)', borderRadius: 14, padding: '16px 10px', textAlign: 'center', cursor: 'pointer' }}>
-                <div style={{ fontSize: 22, marginBottom: 6 }}>{icon}</div>
-                <div style={{ fontSize: 12.5, fontWeight: 500 }}>{label}</div>
-              </div>
+              <Card
+                key={label as string}
+                variant="sand"
+                pad="sm"
+                onClick={() => navigate(path as string)}
+                style={{ textAlign: 'center', padding: '16px 10px' }}
+              >
+                <div style={{ fontSize: 22, marginBottom: 'var(--space-2)' }}>{icon}</div>
+                <div style={{ fontSize: 'var(--fs-small)', fontWeight: 500 }}>{label}</div>
+              </Card>
             ))}
           </div>
 
           {/* Meal list */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
             <div className="label">Today's Meals</div>
             <button className="btn btn-secondary btn-sm" onClick={() => navigate('/scan')}>+ Add Meal</button>
           </div>
           {todayLogs && todayLogs.length > 0 ? todayLogs.map(log => (
-            <div key={log._id} style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', background: 'var(--sand)', borderRadius: 12, marginBottom: 8 }}>
-              <span style={{ fontSize: 20, marginRight: 12 }}>{MEAL_ICON[log.mealType]}</span>
-              <div style={{ flex: 1 }}>
+            <Card
+              key={log._id}
+              variant="sand"
+              pad="sm"
+              style={{ display: 'flex', alignItems: 'center', marginBottom: 'var(--space-2)' }}
+            >
+              <span style={{ fontSize: 20, marginRight: 'var(--space-3)' }}>{MEAL_ICON[log.mealType]}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, textTransform: 'capitalize' }}>{log.mealType}</div>
-                <div style={{ fontSize: 12, color: 'var(--muted)' }}>{log.items.map(i => i.name).join(', ')}</div>
+                <div style={{ fontSize: 'var(--fs-micro)', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {log.items.map(i => i.name).join(', ')}
+                </div>
               </div>
               <div className="mono" style={{ fontWeight: 700, color: 'var(--sage-700)' }}>{log.totalCal} cal</div>
-            </div>
+            </Card>
           )) : (
-            <div style={{ textAlign: 'center', padding: 32, color: 'var(--muted)', background: 'var(--sand)', borderRadius: 14 }}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>🍽️</div>
-              No meals logged yet.{' '}
-              <span style={{ color: 'var(--sage-700)', cursor: 'pointer' }} onClick={() => navigate('/scan')}>
-                Scan your first meal →
-              </span>
-            </div>
+            <EmptyState
+              icon="🍽️"
+              title="No meals logged yet"
+              helper={<>Snap a photo or open Telegram to log by typing.</>}
+              cta={<button className="btn btn-primary" onClick={() => navigate('/scan')}>Scan your first meal</button>}
+            />
           )}
         </div>
 
         {/* Sidebar */}
         <div>
-          <div style={{ background: 'var(--sand)', borderRadius: 18, padding: 20, marginBottom: 16 }}>
-            <div className="label" style={{ marginBottom: 14 }}>This Week</div>
+          <Card variant="sand" pad="md" style={{ marginBottom: 'var(--space-4)' }}>
+            <div className="label" style={{ marginBottom: 'var(--space-4)' }}>This Week</div>
             <WeekStreakBar recentLogs={recentLogs as never} />
-          </div>
-          <div style={{ background: 'var(--sand)', borderRadius: 18, padding: 20, marginBottom: 16 }}>
-            <div className="label" style={{ marginBottom: 10 }}>Your Goal</div>
-            <div style={{ fontWeight: 600, textTransform: 'capitalize', marginBottom: 4 }}>{profile?.goal ?? '—'}</div>
-            <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{calorieGoal} kcal / day</div>
-          </div>
+          </Card>
+          <Card variant="sand" pad="md" style={{ marginBottom: 'var(--space-4)' }}>
+            <div className="label" style={{ marginBottom: 'var(--space-3)' }}>Your Goal</div>
+            <div style={{ fontWeight: 600, textTransform: 'capitalize', marginBottom: 'var(--space-1)' }}>{profile?.goal ?? '—'}</div>
+            <div style={{ fontSize: 'var(--fs-small)', color: 'var(--muted)' }}>{calorieGoal} kcal / day</div>
+          </Card>
         </div>
       </div>
     </div>
