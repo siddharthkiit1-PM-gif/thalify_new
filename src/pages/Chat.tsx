@@ -3,6 +3,7 @@ import { useQuery, useAction } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import Navbar from '../components/Navbar'
 import Progress from '../components/ui/Progress'
+import Section from '../components/ui/Section'
 import { useIsMobile } from '../hooks/useIsMobile'
 
 function getChips(): string[] {
@@ -55,19 +56,18 @@ export default function Chat() {
         {/* Chat column */}
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           {/* Header */}
-          <div style={{ padding: '20px 0 14px' }}>
-            <div data-eyebrow style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.18em', color: 'var(--sage-700)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>
-              Health Buddy · Always on
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
-              <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--sage-100)', display: 'grid', placeItems: 'center', fontSize: 22 }}>🧠</div>
-              <div>
-                <div className="serif" style={{ fontSize: 18, letterSpacing: '-0.005em' }}>Ask me anything about your meals.</div>
-                <div style={{ fontSize: 12, color: 'var(--sage-700)', display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                  <span className="online-dot" /> Online · Hinglish + 4 more languages
+          <div style={{ padding: 'var(--space-5) 0 var(--space-4)', borderBottom: '1px solid var(--border)', marginBottom: 'var(--space-4)' }}>
+            <Section
+              eyebrow="Health Buddy · Always on"
+              title="Ask me anything about your meals."
+              subtitle={<><span className="online-dot" /> Online · Hinglish + 4 more languages</>}
+              leading={
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--sage-100)', display: 'grid', placeItems: 'center', fontSize: 22 }}>
+                  🧠
                 </div>
-              </div>
-            </div>
+              }
+              bottom={0}
+            />
           </div>
 
           {/* Messages */}
