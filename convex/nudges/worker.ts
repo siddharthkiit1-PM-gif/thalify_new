@@ -139,11 +139,17 @@ export const processSingleEvent = internalAction({
       return;
     }
 
-    // post-meal-insight is the per-meal "buddy insight" that should always
-    // fire — bypasses both the daily frequency cap and the 12h bucket dedup.
-    // Free + paid both get every-meal feedback. Other triggers still respect
-    // the cap so daily prompts / re-engagement don't spam.
-    const isUnthrottled = match.trigger === "post-meal-insight";
+    // Triggers exempt from cap + dedup. These are scheduled or user-initiated
+    // signals that the user explicitly opted in for — water reminders, per-
+    // meal buddy insight, and the 7pm "have you eaten?" check. They should
+    // always fire. Other triggers (re-engagement, food-repetition, upgrade)
+    // still respect the cap so non-essential nudges don't pile up.
+    const UNTHROTTLED_TRIGGERS = new Set([
+      "post-meal-insight",
+      "water-check",
+      "daily-log-prompt",
+    ]);
+    const isUnthrottled = UNTHROTTLED_TRIGGERS.has(match.trigger);
 
     if (!isUnthrottled) {
       const cap = frequencyCapForPlan(state.plan);
