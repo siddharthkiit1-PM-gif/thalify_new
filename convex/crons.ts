@@ -9,12 +9,13 @@ crons.interval(
   internal.nudges.worker.processNudgeQueue,
 );
 
-// One single daily ask: "have you logged today?" — fires only if the user
-// hasn't logged anything yet that day. Replaces the earlier breakfast/lunch/
-// dinner-skipped triple-cron, which was too noisy. 8 PM IST = 14:30 UTC.
+// One single daily ask: "have you eaten today?" — fires only if the user
+// hasn't logged anything yet by evening. Replaces the earlier breakfast/
+// lunch/dinner-skipped triple-cron, which was too noisy.
+// 7 PM IST = 13:30 UTC.
 crons.cron(
   "seed daily log prompt",
-  "30 14 * * *",
+  "30 13 * * *",
   internal.nudges.timeSeeders.seedDailyLogPrompt,
 );
 

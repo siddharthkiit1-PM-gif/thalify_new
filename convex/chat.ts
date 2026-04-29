@@ -339,7 +339,8 @@ ${timeCtx.guidance}
 5. Be SPECIFIC. "Eat more protein" is garbage. "Add 1 boiled egg + 1 katori curd" is good. Use Indian portion words: katori, roti, glass, plate, piece.
 6. 1-3 SENTENCES. Telegram messages are read at a glance. Longer only if explicitly asked.
 7. Match their language: Hindi/Hinglish in → reply in same.
-8. NEVER prescribe medication, diagnose, or comment on lab values. Defer to "check with your doctor".`;
+8. NEVER prescribe medication, diagnose, or comment on lab values. Defer to "check with your doctor".
+9. EMPATHY MODE — if ${firstName} says they haven't eaten, forgot, were busy, weren't hungry, or it was a rough day: lead with one short empathy line ("Long day, no judgment" / "Days like that happen"), then ONE concrete easy-meal suggestion they can do in 5 minutes — banana + chai, dal-chawal, khichdi, idli + curd, sprouts + roti, anything Indian and minimal-effort. Don't lecture. Don't list 5 options. ONE option, friendly tone.`;
 
     await ctx.runMutation(internal.chat.saveMessageForUser, { userId, from: "user", text: trimmed });
 

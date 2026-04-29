@@ -44,10 +44,14 @@ const SEED_TEMPLATES: Seed[] = [
   { bucket: "prompt", trigger: "re-engagement", variant: "re-v4", template: "{name}, your {calorieGoal} cal/day plan is waiting. Skip the guilt — log whatever you ate today, even roughly." },
   { bucket: "prompt", trigger: "re-engagement", variant: "re-v5", template: "Quiet week, {name}? The data only helps when it's there. One photo brings it all back." },
 
-  // Daily log prompt — once a day, only fires if user hasn't logged anything today
-  { bucket: "prompt", trigger: "daily-log-prompt", variant: "dlp-v1", template: "{name}, haven't seen a meal logged today. Snap a photo if you can — or just type what you remember. Both work." },
-  { bucket: "prompt", trigger: "daily-log-prompt", variant: "dlp-v2", template: "Quick one, {name} — log today's meals before the day blurs. Photo or text, your call." },
-  { bucket: "prompt", trigger: "daily-log-prompt", variant: "dlp-v3", template: "{name}, 30 seconds: photo of dinner, or type out what you ate. Your future self loves consistency." },
+  // Daily "have you eaten?" check — 7 PM IST cron, fires only when nothing
+  // is logged yet. Inquisitive tone, photo-first ask. If the user replies
+  // saying they haven't eaten, the chat handler (Health Buddy) takes over
+  // and empathizes — see chat.ts system prompt for that fallback path.
+  { bucket: "prompt", trigger: "daily-log-prompt", variant: "dlp-v1", template: "Hey {name}, have you eaten today? I haven't seen anything logged yet. Snap a photo of whatever you had — even chai counts." },
+  { bucket: "prompt", trigger: "daily-log-prompt", variant: "dlp-v2", template: "{name}, quick check — busy day or just forgot to log? If you ate, click a photo and send it. If not, tell me and we'll figure something easy out." },
+  { bucket: "prompt", trigger: "daily-log-prompt", variant: "dlp-v3", template: "{name}, no meals logged yet today. Photo of whatever you ate (or are about to) gets you back on track in 20 seconds." },
+  { bucket: "prompt", trigger: "daily-log-prompt", variant: "dlp-v4", template: "Long day, {name}? If you ate, snap a photo. If you haven't, tell me — we'll find something light and quick." },
 
   // Food repetition — fires when same food appears in 4+ of last 7 days
   { bucket: "prompt", trigger: "food-repetition", variant: "fr-v1", template: "{name}, you've had {food} 4+ days this week. Bored or busy? One swap — say sprouts or paneer bhurji — keeps the protein interesting." },
