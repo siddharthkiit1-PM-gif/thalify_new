@@ -7,6 +7,36 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 const PERSONAL_ADMIN_EMAIL = "agrawalsiddharth66@gmail.com";
 
 /**
+ * One-shot: update the daily-log-prompt template copy to the newer
+ * "have you eaten?" inquisitive tone. Re-seeding doesn't touch existing
+ * variants (idempotent by `variant`), so we patch them by hand here.
+ *
+ * Call: npx convex run admin:updateDailyLogPromptCopy --prod
+ */
+export const updateDailyLogPromptCopy = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const updates: { variant: string; template: string }[] = [
+      { variant: "dlp-v1", template: "Hey {name}, have you eaten today? I haven't seen anything logged yet. Snap a photo of whatever you had — even chai counts." },
+      { variant: "dlp-v2", template: "{name}, quick check — busy day or just forgot to log? If you ate, click a photo and send it. If not, tell me and we'll figure something easy out." },
+      { variant: "dlp-v3", template: "{name}, no meals logged yet today. Photo of whatever you ate (or are about to) gets you back on track in 20 seconds." },
+    ];
+    let updated = 0;
+    for (const u of updates) {
+      const row = await ctx.db
+        .query("nudgeTemplates")
+        .filter((q) => q.eq(q.field("variant"), u.variant))
+        .first();
+      if (row && row.template !== u.template) {
+        await ctx.db.patch(row._id, { template: u.template });
+        updated++;
+      }
+    }
+    return { updated, total: updates.length };
+  },
+});
+
+/**
  * Diagnostic: why are Telegram nudges not landing for a given user?
  * Returns telegram-binding state + last 10 events + last 10 notifications.
  *
