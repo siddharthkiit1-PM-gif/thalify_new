@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAction, useMutation } from 'convex/react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../convex/_generated/api'
 import Navbar from '../components/Navbar'
 import Section from '../components/ui/Section'
 
+type MealType = 'breakfast' | 'lunch' | 'snack' | 'dinner'
 type OptResult = { name: string; action: 'keep' | 'reduce' | 'skip' | 'add'; recommendation: string; cal: number; protein: number; portion: string; matched: boolean }
 
 const ACTION_STYLE: Record<string, { color: string; bg: string; label: string }> = {
@@ -14,7 +15,17 @@ const ACTION_STYLE: Record<string, { color: string; bg: string; label: string }>
   add:    { color: '#1d4ed8', bg: '#eff6ff',          label: '+ Add' },
 }
 
+const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'snack', 'dinner']
+
 function todayDate() { return new Date().toISOString().split('T')[0] }
+
+function guessMealType(): MealType {
+  const h = new Date().getHours()
+  if (h < 11) return 'breakfast'
+  if (h < 15) return 'lunch'
+  if (h < 19) return 'snack'
+  return 'dinner'
+}
 
 export default function Family() {
   const navigate = useNavigate()
@@ -28,6 +39,27 @@ export default function Family() {
   const [optimizing, setOptimizing] = useState(false)
   const [error, setError] = useState('')
   const [logged, setLogged] = useState(false)
+  // Per-item selection — user picks which optimized items they're actually eating.
+  // Defaults: every non-skip row is checked; skip rows start unchecked.
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [mealType, setMealType] = useState<MealType>(guessMealType())
+  const [logging, setLogging] = useState(false)
+
+  // Whenever a fresh optimize result arrives, reset the selection to non-skip rows.
+  useEffect(() => {
+    if (!result) { setSelected(new Set()); return }
+    const next = new Set<number>()
+    result.forEach((r, i) => { if (r.action !== 'skip') next.add(i) })
+    setSelected(next)
+  }, [result])
+
+  function toggleSelected(i: number) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(i)) next.delete(i); else next.add(i)
+      return next
+    })
+  }
 
   function addDish() {
     const trimmed = dishInput.trim()
@@ -50,15 +82,45 @@ export default function Family() {
     }
   }
 
-  async function logOptimized() {
+  async function logSelected() {
     if (!result) return
-    const items = result.filter(r => r.action !== 'skip').map(r => ({
-      name: r.name, portion: '1 serving', cal: r.cal, protein: 0, carbs: 0, fat: 0
-    }))
-    const totalCal = items.reduce((acc, i) => acc + i.cal, 0)
-    await logMeal({ date: todayDate(), mealType: 'dinner', items, totalCal })
-    setLogged(true)
+    if (selected.size === 0) return
+    setLogging(true)
+    setError('')
+    try {
+      const items = result
+        .map((r, i) => ({ r, i }))
+        .filter(({ i }) => selected.has(i))
+        .map(({ r }) => {
+          // "Reduce" rows log at half-portion / half-cal. "Add" + "Keep" log full.
+          const multiplier = r.action === 'reduce' ? 0.5 : 1
+          return {
+            name: r.action === 'reduce' ? `${r.name} (½ portion)` : r.name,
+            portion: r.portion || '1 serving',
+            cal: Math.round(r.cal * multiplier),
+            protein: Math.round((r.protein || 0) * multiplier),
+            carbs: 0,
+            fat: 0,
+          }
+        })
+      const totalCal = items.reduce((acc, i) => acc + i.cal, 0)
+      await logMeal({ date: todayDate(), mealType, items, totalCal })
+      setLogged(true)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not log meal — please retry.')
+    } finally {
+      setLogging(false)
+    }
   }
+
+  // Live count of selected calories (respecting reduce → half)
+  const selectedCal = result
+    ? result.reduce((acc, r, i) => {
+        if (!selected.has(i)) return acc
+        const mult = r.action === 'reduce' ? 0.5 : 1
+        return acc + r.cal * mult
+      }, 0)
+    : 0
 
   const beforeCal = result ? result.filter(r => r.action !== 'add').reduce((acc, r) => acc + r.cal, 0) : 0
   const afterCal = result ? result.filter(r => r.action !== 'skip').reduce((acc, r) => {
@@ -136,19 +198,52 @@ export default function Family() {
             )}
             {calorieDelta === 0 && <div style={{ marginBottom: 20 }} />}
 
-            {/* Per-dish guidance */}
+            {/* Per-dish guidance with selection checkboxes */}
+            <div className="label" style={{ marginBottom: 8 }}>Tick what you're actually eating</div>
             <div style={{ background: 'var(--sand)', borderRadius: 16, overflow: 'hidden', marginBottom: 20 }}>
               {result.map((item, i) => {
                 const s = ACTION_STYLE[item.action]
+                const isChecked = selected.has(i)
+                const halfMode = item.action === 'reduce'
                 return (
-                  <div key={i} style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                  <div
+                    key={i}
+                    onClick={() => !logged && toggleSelected(i)}
+                    style={{
+                      padding: '14px 18px',
+                      borderBottom: '1px solid var(--border)',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 14,
+                      cursor: logged ? 'default' : 'pointer',
+                      opacity: isChecked || logged ? 1 : 0.6,
+                      transition: 'opacity 0.15s ease, background 0.15s ease',
+                      background: isChecked && !logged ? 'rgba(45,95,58,0.04)' : 'transparent',
+                    }}
+                  >
+                    {/* checkbox */}
+                    <div
+                      style={{
+                        width: 20, height: 20, borderRadius: 5,
+                        border: `1.5px solid ${isChecked ? 'var(--sage-700)' : 'var(--muted)'}`,
+                        background: isChecked ? 'var(--sage-700)' : 'transparent',
+                        display: 'grid', placeItems: 'center',
+                        flexShrink: 0, marginTop: 2,
+                      }}
+                    >
+                      {isChecked && (
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path d="M2.5 6L5 8.5L9.5 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </div>
                     <span style={{ padding: '3px 10px', borderRadius: 99, fontSize: 12, fontWeight: 700, color: s.color, background: s.bg, whiteSpace: 'nowrap', marginTop: 2 }}>{s.label}</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-                        <span>{item.name}</span>
+                        <span>{item.name}{halfMode && isChecked && <span style={{ color: 'var(--muted)', fontWeight: 500, fontSize: 13 }}> · ½ portion</span>}</span>
                         {item.cal > 0 && (
                           <span className="mono" style={{ fontSize: 12, color: 'var(--muted)' }}>
-                            {item.cal} cal · {item.protein}g protein · {item.portion}
+                            {halfMode && isChecked ? Math.round(item.cal * 0.5) : item.cal} cal · {item.protein}g protein · {item.portion}
                           </span>
                         )}
                         {!item.matched && item.action !== 'add' && (
@@ -162,11 +257,50 @@ export default function Family() {
               })}
             </div>
 
-            {!logged ? (
-              <button className="btn btn-primary" style={{ width: '100%' }} onClick={logOptimized}>Log Optimized Meal</button>
-            ) : (
+            {!logged && (
+              <>
+                {/* Meal type picker */}
+                <div className="label" style={{ marginBottom: 8 }}>Log as</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 16 }}>
+                  {MEAL_TYPES.map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setMealType(t)}
+                      disabled={logging}
+                      style={{
+                        height: 38, borderRadius: 8,
+                        background: mealType === t ? 'var(--sage-700)' : 'var(--cream)',
+                        color: mealType === t ? '#fff' : 'var(--ink-2)',
+                        border: '1px solid ' + (mealType === t ? 'var(--sage-700)' : 'var(--border)'),
+                        fontSize: 13, fontWeight: 600,
+                        textTransform: 'capitalize', cursor: 'pointer',
+                      }}
+                    >{t}</button>
+                  ))}
+                </div>
+
+                {/* Selected summary + log button */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10, fontSize: 13, color: 'var(--ink-2)' }}>
+                  <span>{selected.size === 0 ? 'Nothing selected' : `${selected.size} item${selected.size === 1 ? '' : 's'} selected`}</span>
+                  {selected.size > 0 && (
+                    <span className="mono" style={{ fontWeight: 600, color: 'var(--ink)' }}>
+                      {Math.round(selectedCal)} cal total
+                    </span>
+                  )}
+                </div>
+                <button
+                  className="btn btn-primary"
+                  style={{ width: '100%' }}
+                  disabled={selected.size === 0 || logging}
+                  onClick={logSelected}
+                >
+                  {logging ? 'Logging…' : `Log selected as ${mealType}`}
+                </button>
+              </>
+            )}
+            {logged && (
               <div style={{ textAlign: 'center', padding: '16px', color: 'var(--sage-700)', fontWeight: 600 }}>
-                ✓ Logged! <span style={{ color: 'var(--ink-2)', fontWeight: 400, cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>Back to dashboard →</span>
+                ✓ Logged! <span style={{ color: 'var(--ink-2)', fontWeight: 400, cursor: 'pointer', textDecoration: 'underline' }} onClick={() => navigate('/dashboard')}>Back to dashboard →</span>
               </div>
             )}
           </div>
