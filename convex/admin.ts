@@ -37,6 +37,153 @@ export const updateDailyLogPromptCopy = internalMutation({
 });
 
 /**
+ * Funnel view: every user with their activity state. Useful for spotting
+ * sign-up-but-never-came-back drop-offs.
+ *
+ * Returns one row per user, newest signup first, with:
+ *   email, name, signupAt, onboardingComplete, plan, mealLogCount,
+ *   scanCount, lastMealAt, telegramConnected, daysSinceLastMeal.
+ *
+ * Admin-gated to agrawalsiddharth66@gmail.com via the public version below.
+ * CLI version skips the gate (CLI access is the gate).
+ *
+ * Call: npx convex run admin:listUsersFunnelInternal --prod
+ */
+export const listUsersFunnelInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    const profiles = await ctx.db.query("profiles").collect();
+    const profileByUser = new Map(profiles.map((p) => [p.userId, p]));
+
+    const allLogs = await ctx.db.query("mealLogs").collect();
+    const mealCountByUser = new Map<string, number>();
+    const lastMealByUser = new Map<string, number>();
+    for (const log of allLogs) {
+      mealCountByUser.set(log.userId, (mealCountByUser.get(log.userId) ?? 0) + 1);
+      const prev = lastMealByUser.get(log.userId) ?? 0;
+      if (log._creationTime > prev) lastMealByUser.set(log.userId, log._creationTime);
+    }
+
+    const allScans = await ctx.db.query("scanResults").collect();
+    const scanCountByUser = new Map<string, number>();
+    for (const s of allScans) {
+      scanCountByUser.set(s.userId, (scanCountByUser.get(s.userId) ?? 0) + 1);
+    }
+
+    const now = Date.now();
+
+    const rows = users
+      .map((u) => {
+        const p = profileByUser.get(u._id);
+        const lastMealAt = lastMealByUser.get(u._id);
+        const meals = mealCountByUser.get(u._id) ?? 0;
+        const scans = scanCountByUser.get(u._id) ?? 0;
+        return {
+          email: u.email ?? "(no email)",
+          name: u.name ?? "(no name)",
+          signupAt: new Date(u._creationTime).toISOString(),
+          onboardingComplete: p?.onboardingComplete === true,
+          plan: p?.plan ?? "free",
+          mealLogCount: meals,
+          scanCount: scans,
+          lastMealAt: lastMealAt ? new Date(lastMealAt).toISOString() : null,
+          daysSinceLastMeal: lastMealAt
+            ? Math.floor((now - lastMealAt) / (24 * 3600 * 1000))
+            : null,
+          telegramConnected: p?.telegramOptIn === true,
+          // Useful summary flag — true if they signed up but did nothing else
+          dormant: meals === 0 && scans === 0,
+        };
+      })
+      .sort((a, b) => (a.signupAt < b.signupAt ? 1 : -1));
+
+    const dormant = rows.filter((r) => r.dormant).length;
+    const onboardingIncomplete = rows.filter((r) => !r.onboardingComplete).length;
+    const activeAtSomePoint = rows.length - dormant;
+
+    return {
+      summary: {
+        totalUsers: rows.length,
+        dormantSinceSignup: dormant,
+        onboardingIncomplete,
+        activeAtSomePoint,
+      },
+      users: rows,
+    };
+  },
+});
+
+/**
+ * Public-query version (admin-gated). Same data, callable from a UI later
+ * if you want a /admin/users page. Returns null for any caller whose
+ * authenticated email isn't agrawalsiddharth66@gmail.com.
+ */
+export const listUsersFunnel = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const me = await ctx.db.get(userId);
+    if (!me || me.email !== PERSONAL_ADMIN_EMAIL) return null;
+
+    const users = await ctx.db.query("users").collect();
+    const profiles = await ctx.db.query("profiles").collect();
+    const profileByUser = new Map(profiles.map((p) => [p.userId, p]));
+
+    const allLogs = await ctx.db.query("mealLogs").collect();
+    const mealCountByUser = new Map<string, number>();
+    const lastMealByUser = new Map<string, number>();
+    for (const log of allLogs) {
+      mealCountByUser.set(log.userId, (mealCountByUser.get(log.userId) ?? 0) + 1);
+      const prev = lastMealByUser.get(log.userId) ?? 0;
+      if (log._creationTime > prev) lastMealByUser.set(log.userId, log._creationTime);
+    }
+
+    const allScans = await ctx.db.query("scanResults").collect();
+    const scanCountByUser = new Map<string, number>();
+    for (const s of allScans) {
+      scanCountByUser.set(s.userId, (scanCountByUser.get(s.userId) ?? 0) + 1);
+    }
+
+    const now = Date.now();
+    const rows = users
+      .map((u) => {
+        const p = profileByUser.get(u._id);
+        const lastMealAt = lastMealByUser.get(u._id);
+        const meals = mealCountByUser.get(u._id) ?? 0;
+        const scans = scanCountByUser.get(u._id) ?? 0;
+        return {
+          email: u.email ?? "(no email)",
+          name: u.name ?? "(no name)",
+          signupAt: u._creationTime,
+          onboardingComplete: p?.onboardingComplete === true,
+          plan: p?.plan ?? "free",
+          mealLogCount: meals,
+          scanCount: scans,
+          lastMealAt: lastMealAt ?? null,
+          daysSinceLastMeal: lastMealAt
+            ? Math.floor((now - lastMealAt) / (24 * 3600 * 1000))
+            : null,
+          telegramConnected: p?.telegramOptIn === true,
+          dormant: meals === 0 && scans === 0,
+        };
+      })
+      .sort((a, b) => b.signupAt - a.signupAt);
+
+    return {
+      summary: {
+        totalUsers: rows.length,
+        dormantSinceSignup: rows.filter((r) => r.dormant).length,
+        onboardingIncomplete: rows.filter((r) => !r.onboardingComplete).length,
+        activeAtSomePoint: rows.filter((r) => !r.dormant).length,
+      },
+      users: rows,
+    };
+  },
+});
+
+/**
  * One-shot: fire a weekly-recap nudge for a specific user immediately —
  * useful for testing the data-driven Sunday insight outside its cron
  * window.
