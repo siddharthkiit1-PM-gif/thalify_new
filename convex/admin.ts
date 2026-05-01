@@ -37,6 +37,42 @@ export const updateDailyLogPromptCopy = internalMutation({
 });
 
 /**
+ * Recent meal logs across ALL users — for admin to see who logged what.
+ * Joins mealLogs with users so each row has the person's name + email
+ * inline (no need to cross-reference userIds in the data tab).
+ *
+ * Call: npx convex run admin:recentMealLogsAcrossUsers --prod '{"limit":50}'
+ */
+export const recentMealLogsAcrossUsers = internalQuery({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit = 100 }) => {
+    const logs = await ctx.db
+      .query("mealLogs")
+      .order("desc")
+      .take(limit);
+
+    const userIds = [...new Set(logs.map((l) => l.userId))];
+    const users = await Promise.all(userIds.map((id) => ctx.db.get(id)));
+    const userMap = new Map(
+      users.filter((u): u is NonNullable<typeof u> => u !== null).map((u) => [u._id, u]),
+    );
+
+    return logs.map((l) => {
+      const u = userMap.get(l.userId);
+      return {
+        time: new Date(l._creationTime).toISOString(),
+        date: l.date,
+        userName: u?.name ?? "(unknown)",
+        userEmail: u?.email ?? "(no email)",
+        mealType: l.mealType,
+        items: l.items.map((i) => i.name),
+        totalCal: l.totalCal,
+      };
+    });
+  },
+});
+
+/**
  * Funnel view: every user with their activity state. Useful for spotting
  * sign-up-but-never-came-back drop-offs.
  *
