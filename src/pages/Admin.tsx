@@ -21,6 +21,8 @@ export default function Admin() {
   })
   const stats = useQuery(api.adminScans.scanStats)
   const dailyStats = useQuery(api.admin.dailyActiveUsers)
+  const usersFunnel = useQuery(api.admin.listUsersFunnel)
+  const [userFilter, setUserFilter] = useState<'all' | 'dormant' | 'active' | 'incomplete'>('all')
 
   if (currentUser === undefined) return <div style={{ padding: 40, textAlign: 'center' }}>Loading…</div>
   if (!currentUser?.isAdmin) {
@@ -75,6 +77,129 @@ export default function Admin() {
               <StatCard label="Net revenue" value={`₹${dailyStats.netRevenueRupees.toLocaleString('en-IN')}`} />
             </div>
           </div>
+        )}
+
+        {/* ── USERS FUNNEL ─────────────────────────────────── */}
+        {usersFunnel && (
+          <>
+            <h2 className="serif" style={{ fontSize: 22, marginBottom: 6 }}>Users</h2>
+            <p style={{ color: 'var(--muted)', marginBottom: 16, fontSize: 14 }}>
+              Everyone who signed up. Tap a row to see their profile data.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
+              <StatCard label="Total signups" value={usersFunnel.summary.totalUsers} />
+              <StatCard label="Dormant since signup" value={usersFunnel.summary.dormantSinceSignup} />
+              <StatCard label="Onboarding incomplete" value={usersFunnel.summary.onboardingIncomplete} />
+              <StatCard label="Active at some point" value={usersFunnel.summary.activeAtSomePoint} />
+            </div>
+
+            {/* Filter tabs */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 16, background: 'var(--sand)', padding: 4, borderRadius: 10, width: 'fit-content', flexWrap: 'wrap' }}>
+              {([
+                ['all', `All (${usersFunnel.summary.totalUsers})`],
+                ['dormant', `Dormant (${usersFunnel.summary.dormantSinceSignup})`],
+                ['active', `Active (${usersFunnel.summary.activeAtSomePoint})`],
+                ['incomplete', `Onboarding incomplete (${usersFunnel.summary.onboardingIncomplete})`],
+              ] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setUserFilter(key)}
+                  style={{
+                    padding: '6px 14px', borderRadius: 6, border: 'none',
+                    background: userFilter === key ? 'var(--sage-700)' : 'transparent',
+                    color: userFilter === key ? 'white' : 'var(--ink-2)',
+                    fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  }}
+                >{label}</button>
+              ))}
+            </div>
+
+            {(() => {
+              const filtered = usersFunnel.users.filter(u => {
+                if (userFilter === 'dormant') return u.dormant
+                if (userFilter === 'active') return !u.dormant
+                if (userFilter === 'incomplete') return !u.onboardingComplete
+                return true
+              })
+              if (filtered.length === 0) {
+                return <div style={{ padding: 32, textAlign: 'center', color: 'var(--muted)', background: 'var(--sand)', borderRadius: 12, marginBottom: 24 }}>No users match this filter.</div>
+              }
+              return (
+                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 32 }}>
+                  {/* Header row */}
+                  {!isMobile && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 100px 80px 70px 90px 100px', gap: 10, padding: '10px 16px', background: 'var(--sand)', fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.6, borderBottom: '1px solid var(--border)' }}>
+                      <div>User</div>
+                      <div>Plan</div>
+                      <div>Signed up</div>
+                      <div>Onboard</div>
+                      <div>Meals</div>
+                      <div>Last meal</div>
+                      <div>State</div>
+                    </div>
+                  )}
+                  {filtered.map((u, i) => {
+                    const signupDate = new Date(u.signupAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+                    const lastMealLabel = u.daysSinceLastMeal === null
+                      ? '—'
+                      : u.daysSinceLastMeal === 0 ? 'today'
+                      : u.daysSinceLastMeal === 1 ? 'yesterday'
+                      : `${u.daysSinceLastMeal}d ago`
+                    return (
+                      <div
+                        key={u.email + i}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: isMobile ? '1fr auto' : '2fr 1fr 100px 80px 70px 90px 100px',
+                          gap: 10,
+                          padding: '12px 16px',
+                          borderBottom: i === filtered.length - 1 ? 'none' : '1px solid var(--border)',
+                          alignItems: 'center',
+                          fontSize: 13,
+                        }}
+                      >
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {u.name}{u.telegramConnected && <span style={{ color: 'var(--tg-blue, #22A6DC)', marginLeft: 6, fontSize: 11 }}>· TG</span>}
+                          </div>
+                          <div style={{ fontSize: 11.5, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {u.email}
+                          </div>
+                          {isMobile && (
+                            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                              <span>{u.plan}</span>
+                              <span>· {signupDate}</span>
+                              <span>· {u.mealLogCount} meals</span>
+                              <span>· last {lastMealLabel}</span>
+                            </div>
+                          )}
+                        </div>
+                        {!isMobile && (
+                          <>
+                            <div style={{ fontSize: 12, color: u.plan === 'lifetime' ? 'var(--sage-700)' : 'var(--muted)', fontWeight: u.plan === 'lifetime' ? 700 : 500, textTransform: 'capitalize' }}>{u.plan}</div>
+                            <div className="mono" style={{ fontSize: 11.5, color: 'var(--ink-2)' }}>{signupDate}</div>
+                            <div style={{ fontSize: 12 }}>
+                              {u.onboardingComplete ? <span style={{ color: 'var(--sage-700)' }}>✓</span> : <span style={{ color: 'var(--amber, #b45309)' }}>—</span>}
+                            </div>
+                            <div className="mono" style={{ fontSize: 13, fontWeight: 700 }}>{u.mealLogCount}</div>
+                            <div className="mono" style={{ fontSize: 11.5, color: u.daysSinceLastMeal === null ? 'var(--muted)' : 'var(--ink-2)' }}>{lastMealLabel}</div>
+                          </>
+                        )}
+                        <div style={{ textAlign: isMobile ? 'right' : 'left' }}>
+                          {u.dormant ? (
+                            <span style={{ background: '#fef2f2', color: '#b91c1c', fontSize: 10.5, fontWeight: 700, padding: '3px 8px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>Dormant</span>
+                          ) : (
+                            <span style={{ background: 'var(--sage-100, #EEF7EC)', color: 'var(--sage-700)', fontSize: 10.5, fontWeight: 700, padding: '3px 8px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>Active</span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })()}
+          </>
         )}
 
         <h2 className="serif" style={{ fontSize: 22, marginBottom: 6 }}>Scan review</h2>
