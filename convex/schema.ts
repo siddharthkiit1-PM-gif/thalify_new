@@ -286,6 +286,20 @@ export default defineSchema({
     .index("by_userId_bucket_createdAt", ["userId", "bucket", "createdAt"])
     .index("by_variant_createdAt", ["variant", "createdAt"]),
 
+  // Per-instance water log — every glass / bottle the user logs.
+  // Day-summed via the by_userId_date index for fast "today's total"
+  // reads. `containerType` records which preset they tapped (or
+  // "custom" for free-form), useful for surfacing patterns later.
+  waterLogs: defineTable({
+    userId: v.id("users"),
+    date: v.string(),         // YYYY-MM-DD, IST day
+    amountMl: v.number(),     // actual milliliters
+    source: v.union(v.literal("web"), v.literal("telegram")),
+    containerType: v.optional(v.string()), // "glass-200" | "glass-250" | "bottle-500" | "bottle-1000" | "custom"
+    createdAt: v.number(),
+  }).index("by_userId_date", ["userId", "date"])
+    .index("by_userId_createdAt", ["userId", "createdAt"]),
+
   // Last-N password hashes per user, used to block reusing a recent password
   // during reset. Independent of the auth library's own password store —
   // this is just a salted SHA-256 of the plaintext, kept for comparison.

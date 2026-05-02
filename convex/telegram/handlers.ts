@@ -47,6 +47,75 @@ const MEAL_LABEL: Record<MealType, string> = {
 const NOT_CONNECTED_REPLY =
   "I don't recognise this account yet. Open Thalify and tap 'Connect with Telegram' to link us — then I can answer questions and log your meals.";
 
+// ── Water intake helpers ─────────────────────────────────────────────
+// Pure-regex detection — fast, deterministic, no extra Gemini call.
+// Picks up English ("water", "glass", "bottle"), Hindi ("paani"), and
+// quantity hints ("500ml", "2 glasses", "1 litre"). Defaults to button
+// flow when no quantity is parseable.
+
+type WaterIntent = { isWater: boolean; amountMl?: number };
+
+function detectWaterIntent(text: string): WaterIntent {
+  const t = text.toLowerCase().trim();
+
+  // Slash command — always water, show buttons
+  if (t === "/water" || t.startsWith("/water ")) return { isWater: true };
+
+  // Strong keyword: "water" or "paani" must be present (or hindi "पानी")
+  const hasWaterWord = /\b(water|paani|h2o|hydrate|hydrating)\b/.test(t) || /पानी/.test(text);
+  // Or "had/drank a glass/bottle/sip" — implies water by default
+  const hasContainerWithVerb =
+    /\b(had|drank|just|took|finished|sipped|chugged)\b/.test(t) &&
+    /\b(glass|bottle|sip|gulp|gulps|glasses|bottles)\b/.test(t);
+
+  if (!hasWaterWord && !hasContainerWithVerb) return { isWater: false };
+
+  // Try to parse explicit amount
+  const mlMatch = t.match(/(\d+(?:\.\d+)?)\s*ml\b/);
+  if (mlMatch) {
+    const ml = Math.round(parseFloat(mlMatch[1]));
+    if (ml > 0 && ml <= 5000) return { isWater: true, amountMl: ml };
+  }
+  const litreMatch = t.match(/(\d+(?:\.\d+)?)\s*(?:litres?|liters?|l)\b/);
+  if (litreMatch) {
+    const ml = Math.round(parseFloat(litreMatch[1]) * 1000);
+    if (ml > 0 && ml <= 5000) return { isWater: true, amountMl: ml };
+  }
+  // "2 glasses" → 250ml each by default
+  const glassesMatch = t.match(/(\d+)\s*glass(?:es)?/);
+  if (glassesMatch) {
+    const ml = parseInt(glassesMatch[1], 10) * 250;
+    if (ml > 0 && ml <= 5000) return { isWater: true, amountMl: ml };
+  }
+  // "a glass" / "one glass" → 250ml
+  if (/\b(a|one)\s+glass\b/.test(t)) return { isWater: true, amountMl: 250 };
+  // "a bottle" / "one bottle" → 500ml
+  if (/\b(a|one)\s+bottle\b/.test(t)) return { isWater: true, amountMl: 500 };
+
+  return { isWater: true };
+}
+
+function waterButtons(): InlineKeyboardButton[][] {
+  return [
+    [
+      { text: "🥛 200ml", callback_data: "waterlog:200" },
+      { text: "🥛 250ml", callback_data: "waterlog:250" },
+    ],
+    [
+      { text: "🍾 500ml", callback_data: "waterlog:500" },
+      { text: "🍶 1L",    callback_data: "waterlog:1000" },
+    ],
+  ];
+}
+
+function containerLabelForMl(ml: number): string {
+  if (ml === 200) return "glass-200";
+  if (ml === 250) return "glass-250";
+  if (ml === 500) return "bottle-500";
+  if (ml === 1000) return "bottle-1000";
+  return "custom";
+}
+
 function summariseScan(items: ScanItem[], totalCal: number, totalProtein: number, suggestedMealType: MealType): string {
   const lines = items.map(
     (i) => `• ${i.name} (${i.portion}) — ${i.cal} cal · ${Math.round(i.protein)}g protein`,
@@ -95,7 +164,41 @@ export const handleText = internalAction({
     }
     await sendChatAction(chatId, "typing");
 
-    // Meal-extract first. If the user typed a meal, route to the log flow.
+    // Water-intent check FIRST — cheap regex, no Gemini call. If the user
+    // typed "had a glass", "/water", "500ml", "drank water", etc., route
+    // straight to the water flow instead of the meal extractor.
+    const water = detectWaterIntent(text);
+    if (water.isWater) {
+      if (water.amountMl) {
+        // Quantity parsed — log it directly, then confirm with running total.
+        await ctx.runMutation(internal.water.logWaterForUser, {
+          userId: lookup.userId,
+          amountMl: water.amountMl,
+          source: "telegram",
+          containerType: containerLabelForMl(water.amountMl),
+        });
+        const today: { totalMl: number; target: number; count: number } = await ctx.runQuery(
+          internal.water.getTodayWaterForUser,
+          { userId: lookup.userId },
+        );
+        const litres = (today.totalMl / 1000).toFixed(2);
+        const targetL = (today.target / 1000).toFixed(1);
+        await sendText(
+          chatId,
+          `✓ Logged ${water.amountMl}ml. Today: ${litres}L / ${targetL}L target.`,
+        );
+        return;
+      }
+      // No quantity — show size buttons for one-tap log.
+      await sendText(
+        chatId,
+        "How much water? Tap one — or just type the ml/glass count.",
+        { inlineKeyboard: waterButtons() },
+      );
+      return;
+    }
+
+    // Meal-extract next. If the user typed a meal, route to the log flow.
     let extract:
       | { intent: "log_meal"; scanResultId: string; items: ScanItem[]; totalCal: number; totalProtein: number }
       | { intent: "chat" };
@@ -214,6 +317,34 @@ export const handleCallback = internalAction({
     if (action === "skip" && parts.length === 2) {
       await answerCallbackQuery(callbackQueryId, "Skipped");
       await editMessageText(chatId, messageId, "✗ Skipped — not logged.\n\nSend another photo anytime.");
+      return;
+    }
+
+    // Water log button: callback_data = "waterlog:200" / "waterlog:250" / etc.
+    if (action === "waterlog" && parts.length === 2) {
+      const ml = parseInt(parts[1], 10);
+      if (!ml || ml < 1 || ml > 5000) {
+        await answerCallbackQuery(callbackQueryId, "Invalid amount");
+        return;
+      }
+      await ctx.runMutation(internal.water.logWaterForUser, {
+        userId: lookup.userId,
+        amountMl: ml,
+        source: "telegram",
+        containerType: containerLabelForMl(ml),
+      });
+      const today: { totalMl: number; target: number; count: number } = await ctx.runQuery(
+        internal.water.getTodayWaterForUser,
+        { userId: lookup.userId },
+      );
+      const litres = (today.totalMl / 1000).toFixed(2);
+      const targetL = (today.target / 1000).toFixed(1);
+      await answerCallbackQuery(callbackQueryId, `Logged ${ml}ml ✓`);
+      await editMessageText(
+        chatId,
+        messageId,
+        `✓ Logged ${ml}ml. Today: ${litres}L / ${targetL}L target.`,
+      );
       return;
     }
 

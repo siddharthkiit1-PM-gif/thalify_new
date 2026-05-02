@@ -10,6 +10,7 @@ import NotificationBanner from '../components/NotificationBanner'
 import TelegramConnectModal from '../components/TelegramConnectModal'
 import TelegramLogo from '../components/TelegramLogo'
 import WeekStreakBar from '../components/WeekStreakBar'
+import WaterWidget from '../components/WaterWidget'
 import { useIsMobile } from '../hooks/useIsMobile'
 
 function todayDate() { return new Date().toISOString().split('T')[0] }
@@ -297,6 +298,7 @@ export default function Dashboard() {
 
           {/* SIDEBAR — hairline cards, restrained */}
           <div>
+            <WaterWidget />
             <Card variant="hairline" pad="md" style={{ marginBottom: 'var(--space-5)' }}>
               <div className="mono" style={{ fontSize: 'var(--fs-label)', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--muted)', fontWeight: 700, marginBottom: 'var(--space-4)' }}>
                 This week

@@ -56,6 +56,7 @@ import type * as telegram_handlers from "../telegram/handlers.js";
 import type * as telegram_webhook from "../telegram/webhook.js";
 import type * as users from "../users.js";
 import type * as waitlist from "../waitlist.js";
+import type * as water from "../water.js";
 import type * as whatsapp_adapter from "../whatsapp/adapter.js";
 import type * as whatsapp_optIn from "../whatsapp/optIn.js";
 import type * as whatsapp_webhook from "../whatsapp/webhook.js";
@@ -115,6 +116,7 @@ declare const fullApi: ApiFromModules<{
   "telegram/webhook": typeof telegram_webhook;
   users: typeof users;
   waitlist: typeof waitlist;
+  water: typeof water;
   "whatsapp/adapter": typeof whatsapp_adapter;
   "whatsapp/optIn": typeof whatsapp_optIn;
   "whatsapp/webhook": typeof whatsapp_webhook;

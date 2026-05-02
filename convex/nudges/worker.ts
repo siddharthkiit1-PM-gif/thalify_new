@@ -101,6 +101,7 @@ export const processSingleEvent = internalAction({
       weightKg?: number;
       heightCm?: number;
       age?: number;
+      city?: string;
       totalCalToday: number;
       mealCountToday: number;
       hasBreakfastToday: boolean;
@@ -200,6 +201,18 @@ export const processSingleEvent = internalAction({
       );
     }
 
+    // For water-check: pull today's water total + most recent meal items so
+    // the AI can write a weather-and-food-aware pro-tip ("after biryani,
+    // ajwain water"). Two cheap reads, only on this trigger.
+    let todayWater: { totalMl: number; target: number; count: number } | undefined;
+    let recentMealItems: string[] | undefined;
+    if (match.trigger === "water-check") {
+      [todayWater, recentMealItems] = await Promise.all([
+        ctx.runQuery(internal.water.getTodayWaterForUser, { userId: event.userId }),
+        ctx.runQuery(internal.nudges.worker.getMostRecentMealItems, { userId: event.userId }),
+      ]);
+    }
+
     const written = await writeNudge({
       name: state.name,
       goal: state.goal,
@@ -210,6 +223,11 @@ export const processSingleEvent = internalAction({
       food: repeatedFood,
       weightKg: state.weightKg,
       calorieGoal: state.calorieGoal,
+      city: state.city,
+      // Water context — only populated for water-check trigger
+      todayWaterMl: todayWater?.totalMl,
+      todayWaterTargetMl: todayWater?.target,
+      recentMealItems,
       // Rich per-meal context — used by post-meal-insight prompt
       mealItems,
       mealCal,
@@ -366,6 +384,7 @@ export const buildUserState = internalQuery({
       weightKg: profile.weightKg,
       heightCm: profile.heightCm,
       age: profile.age,
+      city: profile.city,
       totalCalToday,
       mealCountToday: todayLogs.length,
       hasBreakfastToday,
@@ -466,5 +485,26 @@ export const persistNudge = internalMutation({
       notificationId,
     });
     return notificationId;
+  },
+});
+
+/**
+ * Most recent meal items for a user (today only). Used by the water-check
+ * prompt so the AI can suggest food-paired hydration ("after biryani,
+ * ajwain water"). Returns up to 5 item names from the latest meal_log
+ * created today. Empty array if no meals logged today.
+ */
+export const getMostRecentMealItems = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }): Promise<string[]> => {
+    const today = new Date().toISOString().split("T")[0];
+    const todayLogs = await ctx.db
+      .query("mealLogs")
+      .withIndex("by_userId_date", (q) => q.eq("userId", userId).eq("date", today))
+      .collect();
+    if (todayLogs.length === 0) return [];
+    // Latest by _creationTime
+    const latest = todayLogs.reduce((a, b) => (a._creationTime > b._creationTime ? a : b));
+    return latest.items.slice(0, 5).map((i) => i.name);
   },
 });

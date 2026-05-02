@@ -16,6 +16,11 @@ export type WriterContext = {
   mealCal?: number;
   totalCalToday?: number;
   dietType?: string;
+  // Used by water-check pro-tip prompt
+  city?: string;                 // bangalore / mumbai / delhi / other
+  recentMealItems?: string[];    // names from last meal logged today
+  todayWaterMl?: number;
+  todayWaterTargetMl?: number;
   // 7-day aggregates — used by the weekly-recap prompt
   weeklyStats?: {
     daysLogged: number;
@@ -100,16 +105,27 @@ RULES:
 Output ONLY the message — no preamble, no quotes, no markdown.`;
 
 // Specialized water-reminder prompt — each nudge is unique to the user's
-// state (goal, macros so far, time of day) so two users never get the
-// same line, and the same user gets different lines noon vs evening.
-const WATER_CHECK_SYSTEM_PROMPT = `You are Health Buddy reminding the user to drink water.
+// state (goal, macros so far, time of day, city, recent meal) so two
+// users never get the same line, and the same user gets different lines
+// noon vs evening. Encourages an Indian-wellness pro-tip when the
+// context (heat / heavy food / digestion) calls for one.
+const WATER_CHECK_SYSTEM_PROMPT = `You are Health Buddy reminding the user to drink water — with an Indian-wellness pro-tip when context warrants.
 
-Generate ONE short water reminder (1 sentence, max 2) that:
+Generate ONE short water nudge (1-2 sentences) that:
+
 1. Uses their first name once, naturally — not at the start.
-2. Ties water to ONE relevant thing about THEM right now: their goal, today's calorie/protein state, the time of day, weather, or what they likely just ate / are about to eat.
-3. Is friendly + concrete (give a specific next move — "2 glasses now", "before lunch", "before chai") — never generic "stay hydrated" filler.
-4. Indian context welcome: chai, summer/AC heat, biryani heaviness, post-dal-rice slump, lassi, etc.
-5. NO clichés: "Make sure to drink…", "It's important to…", "Hydration is key…", "Don't forget…".
+2. Ties water to ONE relevant thing about THEM right now: their goal, today's calorie state, time of day, city/weather, or what they just ate.
+3. When relevant, surface ONE Indian-wellness pro-tip. Examples (don't copy verbatim — pick what fits):
+   - "add subja (basil seeds) — cooling for hot weather"
+   - "ajwain water after biryani — cuts the heaviness"
+   - "warm water with ginger after dal-rice — eases digestion"
+   - "buttermilk in afternoon heat — better than chai"
+   - "lemon-water in the morning — kickstarts metabolism"
+   - "coconut water before workout — natural electrolytes"
+   - "saunf water at night — calms the gut"
+4. Match weather/city when known: Delhi/Mumbai summer = aggressive cooling; Bangalore = mild; "other" = generic Indian.
+5. Be concrete — give a specific next move ("2 glasses with subja now", "before chai", "with lunch") — never generic "stay hydrated".
+6. NO clichés: "Make sure to drink…", "It's important to…", "Hydration is key…", "Don't forget…".
 
 Output ONLY the message — no quotes, no preamble, no markdown.`;
 
@@ -204,15 +220,18 @@ Output: 2-3 line weekly recap. Cite at least one number. Prescribe one specific 
     ? `Water reminder context:
 - Name: ${ctx.name}
 - Goal: ${ctx.goal}${ctx.dietType ? ` · diet: ${ctx.dietType}` : ""}
+${ctx.city ? `- City: ${ctx.city}` : ""}
 ${ctx.calorieGoal ? `- Daily target: ${ctx.calorieGoal} kcal` : ""}
 ${ctx.totalCalToday !== undefined ? `- Calories logged today: ${ctx.totalCalToday}` : ""}
 ${ctx.weightKg ? `- Weight: ${ctx.weightKg} kg` : ""}
+${ctx.todayWaterMl !== undefined && ctx.todayWaterTargetMl !== undefined ? `- Water today: ${ctx.todayWaterMl}ml of ${ctx.todayWaterTargetMl}ml target` : ""}
+${ctx.recentMealItems && ctx.recentMealItems.length > 0 ? `- Most recent meal items: ${ctx.recentMealItems.join(", ")}` : ""}
 - Right now in IST: ${istHour}:00 (${timeLabel})
 
-Template hint (use the tone/intent, but personalize to the context above):
+Template hint (use the tone/intent, but personalize to the context above — include an Indian-wellness pro-tip when it fits):
 "${ctx.template}"
 
-Output: just the water reminder message — 1 sentence, max 2.`
+Output: just the water reminder message — 1 to 2 sentences.`
     : isPostMealInsight
     ? `User just logged a meal.
 - Name: ${ctx.name}
