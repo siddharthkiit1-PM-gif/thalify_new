@@ -37,6 +37,175 @@ export const updateDailyLogPromptCopy = internalMutation({
 });
 
 /**
+ * AUTH-DRIVEN funnel — uses Convex Auth's authSessions table to classify
+ * users by actual app session activity, not meal-log activity.
+ *
+ * Definitions:
+ *   - Total signups   = every row in `users`
+ *   - Ever signed in  = users with ≥1 row in authSessions (almost all,
+ *                       since signup auto-creates a session)
+ *   - Active 7 days   = users with at least 1 authSessions row whose
+ *                       _creationTime is in the last 7 days
+ *   - Active 30 days  = same, but 30-day window
+ *   - Dormant         = signed up + never came back. Defined as: NOT
+ *                       active in last 30 days AND session count ≤ 1
+ *                       (i.e. they only ever had the auto-signup session)
+ *
+ * Returns per-user rows sorted newest signup first.
+ *
+ * Call: npx convex run admin:authFunnelInternal --prod
+ */
+export const authFunnelInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const SEVEN_DAYS = 7 * 24 * 3600 * 1000;
+    const THIRTY_DAYS = 30 * 24 * 3600 * 1000;
+
+    const users = await ctx.db.query("users").collect();
+    const profiles = await ctx.db.query("profiles").collect();
+    const sessions = await ctx.db.query("authSessions").collect();
+    const profileByUser = new Map(profiles.map((p) => [p.userId, p]));
+
+    // Aggregate sessions per user
+    type Agg = { count: number; latest: number; earliest: number };
+    const sessionAgg = new Map<string, Agg>();
+    for (const s of sessions) {
+      const uid = s.userId as string;
+      const t = s._creationTime;
+      const a = sessionAgg.get(uid);
+      if (a) {
+        a.count++;
+        if (t > a.latest) a.latest = t;
+        if (t < a.earliest) a.earliest = t;
+      } else {
+        sessionAgg.set(uid, { count: 1, latest: t, earliest: t });
+      }
+    }
+
+    const rows = users.map((u) => {
+      const a = sessionAgg.get(u._id);
+      const profile = profileByUser.get(u._id);
+      const sessionsCount = a?.count ?? 0;
+      const lastSessionAt = a?.latest ?? null;
+      const ageMs = lastSessionAt ? now - lastSessionAt : null;
+      const isActive7d = ageMs !== null && ageMs <= SEVEN_DAYS;
+      const isActive30d = ageMs !== null && ageMs <= THIRTY_DAYS;
+      // Dormant = never came back. Only had the auto-signup session and
+      // hasn't been active in 30 days.
+      const isDormant = !isActive30d && sessionsCount <= 1;
+      // Status label
+      let status: "active-7d" | "active-30d" | "dormant" | "lapsed" = "lapsed";
+      if (isActive7d) status = "active-7d";
+      else if (isActive30d) status = "active-30d";
+      else if (isDormant) status = "dormant";
+
+      return {
+        email: u.email ?? "(no email)",
+        name: u.name ?? "(no name)",
+        signedUpAt: u._creationTime,
+        sessionsCount,
+        lastSessionAt,
+        daysSinceLastSession: ageMs !== null ? Math.floor(ageMs / (24 * 3600 * 1000)) : null,
+        status,
+        plan: profile?.plan ?? "free",
+        onboardingComplete: profile?.onboardingComplete === true,
+        telegramConnected: profile?.telegramOptIn === true,
+      };
+    }).sort((a, b) => b.signedUpAt - a.signedUpAt);
+
+    return {
+      summary: {
+        totalSignups: rows.length,
+        everSignedIn: rows.filter((r) => r.sessionsCount > 0).length,
+        activeLast7Days: rows.filter((r) => r.status === "active-7d").length,
+        activeLast30Days: rows.filter((r) => r.status === "active-7d" || r.status === "active-30d").length,
+        dormant: rows.filter((r) => r.status === "dormant").length,
+        lapsed: rows.filter((r) => r.status === "lapsed").length,
+      },
+      users: rows,
+    };
+  },
+});
+
+/**
+ * Public-query version of authFunnelInternal — admin-gated to
+ * agrawalsiddharth66@gmail.com so the new /admin section can render
+ * the data with reactive updates.
+ */
+export const authFunnel = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const me = await ctx.db.get(userId);
+    if (!me || me.email !== PERSONAL_ADMIN_EMAIL) return null;
+
+    const now = Date.now();
+    const SEVEN_DAYS = 7 * 24 * 3600 * 1000;
+    const THIRTY_DAYS = 30 * 24 * 3600 * 1000;
+
+    const users = await ctx.db.query("users").collect();
+    const profiles = await ctx.db.query("profiles").collect();
+    const sessions = await ctx.db.query("authSessions").collect();
+    const profileByUser = new Map(profiles.map((p) => [p.userId, p]));
+
+    type Agg = { count: number; latest: number };
+    const sessionAgg = new Map<string, Agg>();
+    for (const s of sessions) {
+      const uid = s.userId as string;
+      const t = s._creationTime;
+      const a = sessionAgg.get(uid);
+      if (a) {
+        a.count++;
+        if (t > a.latest) a.latest = t;
+      } else {
+        sessionAgg.set(uid, { count: 1, latest: t });
+      }
+    }
+
+    const rows = users.map((u) => {
+      const a = sessionAgg.get(u._id);
+      const profile = profileByUser.get(u._id);
+      const sessionsCount = a?.count ?? 0;
+      const lastSessionAt = a?.latest ?? null;
+      const ageMs = lastSessionAt ? now - lastSessionAt : null;
+      const isActive7d = ageMs !== null && ageMs <= SEVEN_DAYS;
+      const isActive30d = ageMs !== null && ageMs <= THIRTY_DAYS;
+      const isDormant = !isActive30d && sessionsCount <= 1;
+      let status: "active-7d" | "active-30d" | "dormant" | "lapsed" = "lapsed";
+      if (isActive7d) status = "active-7d";
+      else if (isActive30d) status = "active-30d";
+      else if (isDormant) status = "dormant";
+      return {
+        email: u.email ?? "(no email)",
+        name: u.name ?? "(no name)",
+        signedUpAt: u._creationTime,
+        sessionsCount,
+        lastSessionAt,
+        daysSinceLastSession: ageMs !== null ? Math.floor(ageMs / (24 * 3600 * 1000)) : null,
+        status,
+        plan: profile?.plan ?? "free",
+        onboardingComplete: profile?.onboardingComplete === true,
+        telegramConnected: profile?.telegramOptIn === true,
+      };
+    }).sort((a, b) => b.signedUpAt - a.signedUpAt);
+
+    return {
+      summary: {
+        totalSignups: rows.length,
+        everSignedIn: rows.filter((r) => r.sessionsCount > 0).length,
+        activeLast7Days: rows.filter((r) => r.status === "active-7d").length,
+        activeLast30Days: rows.filter((r) => r.status === "active-7d" || r.status === "active-30d").length,
+        dormant: rows.filter((r) => r.status === "dormant").length,
+        lapsed: rows.filter((r) => r.status === "lapsed").length,
+      },
+      users: rows,
+    };
+  },
+});
+
+/**
  * Recent meal logs across ALL users — for admin to see who logged what.
  * Joins mealLogs with users so each row has the person's name + email
  * inline (no need to cross-reference userIds in the data tab).

@@ -21,8 +21,8 @@ export default function Admin() {
   })
   const stats = useQuery(api.adminScans.scanStats)
   const dailyStats = useQuery(api.admin.dailyActiveUsers)
-  const usersFunnel = useQuery(api.admin.listUsersFunnel)
-  const [userFilter, setUserFilter] = useState<'all' | 'dormant' | 'active' | 'incomplete'>('all')
+  const authFunnel = useQuery(api.admin.authFunnel)
+  const [userFilter, setUserFilter] = useState<'all' | 'active-7d' | 'active-30d' | 'dormant' | 'lapsed'>('all')
 
   if (currentUser === undefined) return <div style={{ padding: 40, textAlign: 'center' }}>Loading…</div>
   if (!currentUser?.isAdmin) {
@@ -79,28 +79,30 @@ export default function Admin() {
           </div>
         )}
 
-        {/* ── USERS FUNNEL ─────────────────────────────────── */}
-        {usersFunnel && (
+        {/* ── USERS FUNNEL (auth-session based) ────────────── */}
+        {authFunnel && (
           <>
             <h2 className="serif" style={{ fontSize: 22, marginBottom: 6 }}>Users</h2>
             <p style={{ color: 'var(--muted)', marginBottom: 16, fontSize: 14 }}>
-              Everyone who signed up. Tap a row to see their profile data.
+              Activity by app session, not meal logs. Active = signed in within the window.
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
-              <StatCard label="Total signups" value={usersFunnel.summary.totalUsers} />
-              <StatCard label="Dormant since signup" value={usersFunnel.summary.dormantSinceSignup} />
-              <StatCard label="Onboarding incomplete" value={usersFunnel.summary.onboardingIncomplete} />
-              <StatCard label="Active at some point" value={usersFunnel.summary.activeAtSomePoint} />
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: 12, marginBottom: 16 }}>
+              <StatCard label="Total signups" value={authFunnel.summary.totalSignups} />
+              <StatCard label="Active · 7 days" value={authFunnel.summary.activeLast7Days} />
+              <StatCard label="Active · 30 days" value={authFunnel.summary.activeLast30Days} />
+              <StatCard label="Dormant" value={authFunnel.summary.dormant} />
+              <StatCard label="Lapsed" value={authFunnel.summary.lapsed} />
             </div>
 
             {/* Filter tabs */}
             <div style={{ display: 'flex', gap: 6, marginBottom: 16, background: 'var(--sand)', padding: 4, borderRadius: 10, width: 'fit-content', flexWrap: 'wrap' }}>
               {([
-                ['all', `All (${usersFunnel.summary.totalUsers})`],
-                ['dormant', `Dormant (${usersFunnel.summary.dormantSinceSignup})`],
-                ['active', `Active (${usersFunnel.summary.activeAtSomePoint})`],
-                ['incomplete', `Onboarding incomplete (${usersFunnel.summary.onboardingIncomplete})`],
+                ['all', `All (${authFunnel.summary.totalSignups})`],
+                ['active-7d', `Active 7d (${authFunnel.summary.activeLast7Days})`],
+                ['active-30d', `Active 30d (${authFunnel.summary.activeLast30Days})`],
+                ['dormant', `Dormant (${authFunnel.summary.dormant})`],
+                ['lapsed', `Lapsed (${authFunnel.summary.lapsed})`],
               ] as const).map(([key, label]) => (
                 <button
                   key={key}
@@ -116,42 +118,50 @@ export default function Admin() {
             </div>
 
             {(() => {
-              const filtered = usersFunnel.users.filter(u => {
-                if (userFilter === 'dormant') return u.dormant
-                if (userFilter === 'active') return !u.dormant
-                if (userFilter === 'incomplete') return !u.onboardingComplete
+              const filtered = authFunnel.users.filter(u => {
+                if (userFilter === 'active-7d') return u.status === 'active-7d'
+                if (userFilter === 'active-30d') return u.status === 'active-7d' || u.status === 'active-30d'
+                if (userFilter === 'dormant') return u.status === 'dormant'
+                if (userFilter === 'lapsed') return u.status === 'lapsed'
                 return true
               })
               if (filtered.length === 0) {
                 return <div style={{ padding: 32, textAlign: 'center', color: 'var(--muted)', background: 'var(--sand)', borderRadius: 12, marginBottom: 24 }}>No users match this filter.</div>
               }
+              const STATUS_STYLE: Record<string, { bg: string; fg: string; label: string }> = {
+                'active-7d':  { bg: 'var(--sage-100, #EEF7EC)', fg: 'var(--sage-700)', label: 'Active 7d' },
+                'active-30d': { bg: '#FEF6E6',                  fg: '#b45309',         label: 'Active 30d' },
+                'dormant':    { bg: '#fef2f2',                  fg: '#b91c1c',         label: 'Dormant' },
+                'lapsed':     { bg: 'var(--sand)',              fg: 'var(--muted)',    label: 'Lapsed' },
+              }
               return (
                 <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 32 }}>
                   {/* Header row */}
                   {!isMobile && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 100px 80px 70px 90px 100px', gap: 10, padding: '10px 16px', background: 'var(--sand)', fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.6, borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 100px 80px 70px 110px 110px', gap: 10, padding: '10px 16px', background: 'var(--sand)', fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.6, borderBottom: '1px solid var(--border)' }}>
                       <div>User</div>
                       <div>Plan</div>
                       <div>Signed up</div>
                       <div>Onboard</div>
-                      <div>Meals</div>
-                      <div>Last meal</div>
+                      <div>Sessions</div>
+                      <div>Last session</div>
                       <div>State</div>
                     </div>
                   )}
                   {filtered.map((u, i) => {
-                    const signupDate = new Date(u.signupAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
-                    const lastMealLabel = u.daysSinceLastMeal === null
-                      ? '—'
-                      : u.daysSinceLastMeal === 0 ? 'today'
-                      : u.daysSinceLastMeal === 1 ? 'yesterday'
-                      : `${u.daysSinceLastMeal}d ago`
+                    const signupDate = new Date(u.signedUpAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+                    const lastSessionLabel = u.daysSinceLastSession === null
+                      ? 'never'
+                      : u.daysSinceLastSession === 0 ? 'today'
+                      : u.daysSinceLastSession === 1 ? 'yesterday'
+                      : `${u.daysSinceLastSession}d ago`
+                    const s = STATUS_STYLE[u.status]
                     return (
                       <div
                         key={u.email + i}
                         style={{
                           display: 'grid',
-                          gridTemplateColumns: isMobile ? '1fr auto' : '2fr 1fr 100px 80px 70px 90px 100px',
+                          gridTemplateColumns: isMobile ? '1fr auto' : '2fr 1fr 100px 80px 70px 110px 110px',
                           gap: 10,
                           padding: '12px 16px',
                           borderBottom: i === filtered.length - 1 ? 'none' : '1px solid var(--border)',
@@ -170,8 +180,8 @@ export default function Admin() {
                             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                               <span>{u.plan}</span>
                               <span>· {signupDate}</span>
-                              <span>· {u.mealLogCount} meals</span>
-                              <span>· last {lastMealLabel}</span>
+                              <span>· {u.sessionsCount} sessions</span>
+                              <span>· last {lastSessionLabel}</span>
                             </div>
                           )}
                         </div>
@@ -182,16 +192,12 @@ export default function Admin() {
                             <div style={{ fontSize: 12 }}>
                               {u.onboardingComplete ? <span style={{ color: 'var(--sage-700)' }}>✓</span> : <span style={{ color: 'var(--amber, #b45309)' }}>—</span>}
                             </div>
-                            <div className="mono" style={{ fontSize: 13, fontWeight: 700 }}>{u.mealLogCount}</div>
-                            <div className="mono" style={{ fontSize: 11.5, color: u.daysSinceLastMeal === null ? 'var(--muted)' : 'var(--ink-2)' }}>{lastMealLabel}</div>
+                            <div className="mono" style={{ fontSize: 13, fontWeight: 700 }}>{u.sessionsCount}</div>
+                            <div className="mono" style={{ fontSize: 11.5, color: u.daysSinceLastSession === null ? 'var(--muted)' : 'var(--ink-2)' }}>{lastSessionLabel}</div>
                           </>
                         )}
                         <div style={{ textAlign: isMobile ? 'right' : 'left' }}>
-                          {u.dormant ? (
-                            <span style={{ background: '#fef2f2', color: '#b91c1c', fontSize: 10.5, fontWeight: 700, padding: '3px 8px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>Dormant</span>
-                          ) : (
-                            <span style={{ background: 'var(--sage-100, #EEF7EC)', color: 'var(--sage-700)', fontSize: 10.5, fontWeight: 700, padding: '3px 8px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>Active</span>
-                          )}
+                          <span style={{ background: s.bg, color: s.fg, fontSize: 10.5, fontWeight: 700, padding: '3px 8px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{s.label}</span>
                         </div>
                       </div>
                     )
