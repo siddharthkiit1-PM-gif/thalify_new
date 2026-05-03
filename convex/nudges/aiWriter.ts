@@ -1,4 +1,4 @@
-import { generateText, classifyError } from "../ai/claude";
+import { generateText, classifyError, GEMINI_MODEL_SMART } from "../ai/claude";
 import type { SignalPrediction } from "./signal";
 
 export type WriterContext = {
@@ -276,6 +276,11 @@ Output: just the rewritten line.`;
     calorieGoal: ctx.calorieGoal,
   };
 
+  // Promote prompt-heavy triggers to the smart model — better at honoring
+  // multi-clause instructions (REQUIRED pro-tip, evidence-based recap, etc).
+  // Default-rewrite path (SYSTEM_PROMPT) stays on the cheap default model.
+  const usesSmartModel = isWeeklyRecap || isWaterCheck || isPostMealInsight;
+
   try {
     const text = await generateText({
       system: isWeeklyRecap
@@ -287,6 +292,7 @@ Output: just the rewritten line.`;
             : SYSTEM_PROMPT,
       messages: [{ role: "user", content: userPrompt }],
       maxTokens: 150,
+      model: usesSmartModel ? GEMINI_MODEL_SMART : undefined,
     });
     const cleaned = text.trim().replace(/^["']|["']$/g, "");
     if (!cleaned) {

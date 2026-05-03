@@ -2,7 +2,7 @@ import { action, mutation, query, internalAction, internalMutation, internalQuer
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api, internal } from "./_generated/api";
-import { generateText, classifyError } from "./ai/claude";
+import { generateText, classifyError, GEMINI_MODEL_SMART } from "./ai/claude";
 import { checkRateLimit } from "./lib/rateLimit";
 import { isUnlimitedUser } from "./lib/tiers";
 import { enforceUserQuota } from "./lib/quota";
@@ -225,6 +225,7 @@ Now answer ${firstName}'s question using everything above.`;
         system: systemPrompt,
         messages,
         maxTokens: 1024,
+        model: GEMINI_MODEL_SMART,
       });
     } catch (err) {
       throw new Error(classifyError(err).userMessage, { cause: err });
@@ -353,7 +354,7 @@ ${timeCtx.guidance}
 
     let aiText: string;
     try {
-      aiText = await generateText({ system: systemPrompt, messages, maxTokens: 600 });
+      aiText = await generateText({ system: systemPrompt, messages, maxTokens: 600, model: GEMINI_MODEL_SMART });
     } catch (err) {
       throw new Error(classifyError(err).userMessage, { cause: err });
     }

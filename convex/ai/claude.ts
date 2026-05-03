@@ -1,9 +1,17 @@
 import { GoogleGenAI } from "@google/genai";
 
-// gemini-2.5-flash-lite has 1000 RPD on free tier (vs gemini-flash-latest's 20).
-// Still supports vision, good quality for scan + chat + family + lab + patterns.
+// Default — cheap & fast. Used for vision (scan), simple template rewrites,
+// and Telegram text-meal extraction. Free tier: 15 RPM / 1000 RPD; paid: 4000 RPM.
 export const GEMINI_MODEL = "gemini-2.5-flash-lite";
 export const GEMINI_VISION_MODEL = "gemini-2.5-flash-lite";
+
+// "Smart" model — used for prompt-heavy paths where multi-clause instruction-
+// following matters: water pro-tip, post-meal-insight, weekly recap, Health
+// Buddy chat. ~50% more cost/token but significantly better at honoring
+// strict prompt rules (e.g. "REQUIRED — include a pro-tip every time").
+// Override via env var GEMINI_SMART_MODEL to A/B different models without
+// touching code.
+export const GEMINI_MODEL_SMART = process.env.GEMINI_SMART_MODEL ?? "gemini-2.5-flash";
 
 export class AiError extends Error {
   readonly code: "quota" | "rate_limit" | "invalid_request" | "network" | "parse" | "unknown";
