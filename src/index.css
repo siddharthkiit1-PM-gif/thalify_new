@@ -252,12 +252,15 @@ input, textarea { font-family: inherit; color: inherit; }
   letter-spacing: -0.01em;
 }
 .brand-mark {
-  width: 28px; height: 28px; border-radius: 8px;
-  background: linear-gradient(135deg, var(--sage-700), #3d7a4e);
-  color: #fff;
-  display: grid; place-items: center;
-  font-family: var(--serif); font-size: 13px; font-weight: 400;
-  letter-spacing: 0;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: url('/favicon-192.png') center/cover no-repeat;
+  /* Hide the inline "Th" text — every <div className="brand-mark">Th</div>
+     keeps working, the text just becomes invisible while the favicon
+     renders behind it. Still accessible for screen readers via aria-label
+     where set, and the Thalify wordmark sits adjacent. */
+  font-size: 0;
+  color: transparent;
+  flex-shrink: 0;
 }
 .nav-links {
   display: flex; align-items: center; gap: 4px;
