@@ -45,17 +45,36 @@ crons.cron(
   internal.nudges.signalSeeders.seedUpgradePrompts,
 );
 
-// Water reminders — 12 PM IST (06:30 UTC) and 6 PM IST (12:30 UTC).
-// Two pings spaced through the day; respects the existing per-plan
-// frequency cap so it doesn't blow past other nudges.
+// Water reminders — 5x daily, paced through the day:
+// 9 AM IST (03:30 UTC) — morning kickstart
+// 12 PM IST (06:30 UTC) — pre-lunch
+// 3 PM IST (09:30 UTC) — post-lunch slump
+// 6 PM IST (12:30 UTC) — pre-dinner
+// 9 PM IST (15:30 UTC) — wind-down
+// Trigger bypasses cap + dedup, so all 5 fire for active users every day.
+crons.cron(
+  "seed water check 9am",
+  "30 3 * * *",
+  internal.nudges.timeSeeders.seedWaterCheck,
+);
 crons.cron(
   "seed water check noon",
   "30 6 * * *",
   internal.nudges.timeSeeders.seedWaterCheck,
 );
 crons.cron(
-  "seed water check evening",
+  "seed water check 3pm",
+  "30 9 * * *",
+  internal.nudges.timeSeeders.seedWaterCheck,
+);
+crons.cron(
+  "seed water check 6pm",
   "30 12 * * *",
+  internal.nudges.timeSeeders.seedWaterCheck,
+);
+crons.cron(
+  "seed water check 9pm",
+  "30 15 * * *",
   internal.nudges.timeSeeders.seedWaterCheck,
 );
 

@@ -112,6 +112,13 @@ export async function generateText(opts: {
   messages: { role: "user" | "assistant"; content: string }[];
   model?: string;
   maxTokens?: number;
+  /**
+   * Override default thinking-budget logic. Pass `0` to disable, a positive
+   * number to cap reasoning tokens. If omitted, the default heuristic
+   * (short-form on Flash → off, long-form on Flash → quadrupled budget)
+   * applies.
+   */
+  thinkingBudget?: number;
 }): Promise<string> {
   const client = getAiClient();
   const parts = opts.messages.map(m => ({
@@ -120,24 +127,40 @@ export async function generateText(opts: {
   }));
   // Gemini 2.5 Flash uses "thinking" tokens that count against
   // maxOutputTokens. With a tight budget the visible text gets truncated
-  // mid-sentence (we saw "Siddharth, it" in prod). Disable thinking for
-  // short-form generation; for long-form we leave headroom.
+  // mid-sentence (we saw "Siddharth, it" in prod). Default heuristic:
+  // - Short-form on Flash → disable thinking (visible text gets full budget)
+  // - Long-form on Flash → quadruple budget so reasoning can't crowd out output
+  // Caller can override via opts.thinkingBudget.
   const modelName = opts.model ?? GEMINI_MODEL;
-  const isThinkingModel = modelName.includes("flash") && !modelName.includes("lite");
+  const isFlash = modelName.includes("flash");
   const requestedTokens = opts.maxTokens ?? 1024;
   const isShortForm = requestedTokens <= 256;
+  const explicitThinkingBudget = opts.thinkingBudget;
+
+  const effectiveThinkingConfig =
+    explicitThinkingBudget !== undefined
+      ? { thinkingBudget: explicitThinkingBudget }
+      : isFlash && isShortForm
+        ? { thinkingBudget: 0 }
+        : undefined;
+
+  // If caller asked for explicit thinking, leave their maxTokens alone
+  // (they know how much room they want). Otherwise, only Flash long-form
+  // gets the auto-quadruple safety multiplier.
+  const effectiveMaxTokens =
+    explicitThinkingBudget !== undefined
+      ? requestedTokens
+      : isFlash && !isShortForm
+        ? requestedTokens * 4
+        : requestedTokens;
+
   const doCall = () => client.models.generateContent({
     model: modelName,
     contents: parts,
     config: {
       systemInstruction: opts.system,
-      // For short-form on a thinking model, disable thinking so the budget
-      // is 100% visible text. For long-form, multiply the budget so even
-      // reasoning tokens won't cut into the visible message.
-      maxOutputTokens: isThinkingModel && !isShortForm ? requestedTokens * 4 : requestedTokens,
-      thinkingConfig: isThinkingModel && isShortForm
-        ? { thinkingBudget: 0 }
-        : undefined,
+      maxOutputTokens: effectiveMaxTokens,
+      thinkingConfig: effectiveThinkingConfig,
     },
   });
   try {
