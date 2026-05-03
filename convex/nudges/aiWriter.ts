@@ -288,14 +288,14 @@ Output: just the rewritten line.`;
 
   // Smart model on prompt-heavy paths (weekly recap, post-meal insight,
   // Health Buddy chat, family, patterns). Water-check is intentionally
-  // on Lite — cheaper, fires 5x/day per user, with a small thinking
-  // budget enabled for creative reasoning. Default rewrite stays Lite.
+  // on Lite — cheaper, fires 5x/day per user. Thinking disabled on Lite
+  // (a 1-2 line nudge doesn't need chain-of-thought; the creativity
+  // comes from the prompt + rich context). Default rewrite stays Lite.
   const usesSmartModel = isWeeklyRecap || isPostMealInsight;
-  // Water-check: bigger token room (300) + small thinking budget (512)
-  // so the AI can reason about food/weather/time without crowding out
-  // the visible message.
-  const writerMaxTokens = isWaterCheck ? 300 : 150;
-  const writerThinkingBudget = isWaterCheck ? 512 : undefined;
+  // Water-check: 400 visible tokens, no thinking. Plenty for a creative
+  // 1-2 sentence nudge with a pro-tip + city/time/food reference.
+  const writerMaxTokens = isWaterCheck ? 400 : 150;
+  const writerThinkingBudget = isWaterCheck ? 0 : undefined;
 
   try {
     const text = await generateText({
