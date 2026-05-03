@@ -2,7 +2,7 @@ import { action, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api, internal } from "./_generated/api";
-import { generateText, extractJson, classifyError } from "./ai/claude";
+import { generateText, extractJson, classifyError, GEMINI_MODEL_SMART } from "./ai/claude";
 import { matchDish } from "./data/foodMatcher";
 import { checkRateLimit } from "./lib/rateLimit";
 import { enforceUserQuota } from "./lib/quota";
@@ -125,6 +125,7 @@ Refine the recommendations.`;
     system: systemPrompt,
     messages: [{ role: "user", content: userMessage }],
     maxTokens: 1024,
+    model: GEMINI_MODEL_SMART,
   });
 
   const advice = extractJson<AiAdvice>(raw);

@@ -2,7 +2,7 @@ import { action, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api, internal } from "./_generated/api";
-import { generateText, extractJson, classifyError } from "./ai/claude";
+import { generateText, extractJson, classifyError, GEMINI_MODEL_SMART } from "./ai/claude";
 import { checkRateLimit } from "./lib/rateLimit";
 import { enforceUserQuota } from "./lib/quota";
 
@@ -74,6 +74,7 @@ Return ONLY the JSON object.`;
         system: systemPrompt,
         messages: [{ role: "user", content: userMessage }],
         maxTokens: 1024,
+        model: GEMINI_MODEL_SMART,
       });
       return extractJson<PatternResult>(raw);
     } catch (err) {
