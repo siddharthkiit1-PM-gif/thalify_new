@@ -937,3 +937,102 @@ export const runWorkerOnce = internalAction({
     return result;
   },
 });
+
+/**
+ * List every lifetime member with the reason they have it (founder vs
+ * beta vs waitlist) and whether a Razorpay payment is on file. Lets us
+ * answer "did paying customers get a welcome email?" quickly.
+ *
+ * Call: npx convex run admin:listLifetimeMembersInternal --prod
+ */
+export const listLifetimeMembersInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const profiles = await ctx.db.query("profiles").collect();
+    const lifetime = profiles.filter((p) => p.plan === "lifetime");
+    const out: Array<{
+      email: string | null;
+      name: string | null;
+      lifetimeReason: string | null;
+      founderNumber: number | null;
+      paidAt: string | null;
+      hasRazorpayPayment: boolean;
+    }> = [];
+    for (const p of lifetime) {
+      const user = await ctx.db.get(p.userId);
+      out.push({
+        email: user?.email ?? null,
+        name: user?.name ?? null,
+        lifetimeReason: p.lifetimeReason ?? null,
+        founderNumber: p.founderNumber ?? null,
+        paidAt: p.paidAt ? new Date(p.paidAt).toISOString() : null,
+        hasRazorpayPayment: Boolean(p.razorpayPaymentId),
+      });
+    }
+    return out.sort((a, b) => (a.paidAt ?? "") < (b.paidAt ?? "") ? 1 : -1);
+  },
+});
+
+/**
+ * Idempotent backfill: send the founder welcome email to every lifetime
+ * member whose `lifetimeReason === "founder"` (i.e. they actually paid).
+ * Beta-comp'd users are skipped.
+ *
+ * Use this after updating welcome-email copy, or to confirm that all
+ * paying customers received the welcome message. Pass dryRun:true to
+ * preview the recipient list without sending.
+ *
+ * Call:
+ *   npx convex run admin:backfillFounderWelcomeEmail --prod '{"dryRun":true}'
+ *   npx convex run admin:backfillFounderWelcomeEmail --prod
+ */
+export const backfillFounderWelcomeEmail = internalAction({
+  args: { dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, { dryRun }) => {
+    const members: Array<{
+      email: string | null;
+      name: string | null;
+      lifetimeReason: string | null;
+      founderNumber: number | null;
+      paidAt: string | null;
+      hasRazorpayPayment: boolean;
+    }> = await ctx.runQuery(internal.admin.listLifetimeMembersInternal, {});
+
+    const founders = members.filter(
+      (m) => m.lifetimeReason === "founder" && m.email && m.founderNumber,
+    );
+    const sent: string[] = [];
+    const skipped: Array<{ email: string | null; reason: string }> = [];
+    for (const m of members) {
+      if (m.lifetimeReason !== "founder") {
+        skipped.push({ email: m.email, reason: `not-founder (${m.lifetimeReason ?? "none"})` });
+      } else if (!m.email) {
+        skipped.push({ email: null, reason: "no-email" });
+      } else if (!m.founderNumber) {
+        skipped.push({ email: m.email, reason: "no-founder-number" });
+      }
+    }
+
+    if (dryRun) {
+      return {
+        dryRun: true,
+        wouldSend: founders.map((f) => ({
+          email: f.email,
+          name: f.name,
+          founderNumber: f.founderNumber,
+        })),
+        skipped,
+      };
+    }
+
+    for (const f of founders) {
+      await ctx.runAction(internal.razorpay.founder.sendFounderWelcomeEmail, {
+        userEmail: f.email!,
+        userName: f.name ?? undefined,
+        founderNumber: f.founderNumber!,
+      });
+      sent.push(f.email!);
+    }
+    return { dryRun: false, sent, skipped };
+  },
+});

@@ -227,38 +227,49 @@ export const sendFounderWelcomeEmail = internalAction({
     try {
       await sendEmail({
         to: { email: userEmail, name: userName },
-        subject: `You're Founder #${founderNumber} of Thalify 🌿`,
+        subject: `Thank you for choosing Thalify, ${firstName} — Founder #${founderNumber} (your feedback shapes what we build next)`,
         html: `<div style="font-family: Georgia, serif; max-width: 520px; margin: 0 auto; padding: 36px 24px; background: #FEFCF8; color: #1C1917;">
           <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: #2D5F3A; font-weight: 700; text-transform: uppercase; margin-bottom: 12px;">
             Founder · #${founderNumber} of 50
           </div>
-          <h1 style="font-size: 30px; margin: 0 0 16px; line-height: 1.15; letter-spacing: -0.015em; font-weight: 400;">
-            Welcome aboard, ${firstName}.
+          <h1 style="font-size: 30px; margin: 0 0 16px; line-height: 1.18; letter-spacing: -0.015em; font-weight: 400;">
+            Thank you for choosing Thalify, ${firstName}.
           </h1>
-          <p style="font-size: 16px; line-height: 1.6; color: #3A332D; margin: 0 0 18px;">
-            You're one of the first 50 people to back Thalify. That's a real bet — and you've earned <strong>lifetime access</strong> for it.
+          <p style="font-size: 16px; line-height: 1.65; color: #3A332D; margin: 0 0 18px;">
+            And congratulations — for putting your <strong>health before anything else</strong>. That single decision is the one most people delay; you didn't.
+          </p>
+          <p style="font-size: 15px; line-height: 1.65; color: #3A332D; margin: 0 0 18px;">
+            You're now Founder <strong>#${founderNumber} of 50</strong> — one of the first people to back this and to build a calmer relationship with Indian food, one meal at a time.
           </p>
           <div style="background: #F7F3EC; border-left: 3px solid #2D5F3A; border-radius: 12px; padding: 18px 20px; margin: 24px 0;">
-            <div style="font-size: 13px; color: #2D5F3A; font-weight: 600; margin-bottom: 6px;">What you've unlocked</div>
+            <div style="font-size: 13px; color: #2D5F3A; font-weight: 600; margin-bottom: 6px;">Your lifetime access includes</div>
             <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.8; color: #3A332D;">
-              <li>3,000 AI actions / month — every month, forever</li>
-              <li>Unlimited photo scans, Health Buddy chats, lab analysis</li>
-              <li>Telegram bot — connect once, get nudges + log meals there</li>
+              <li>3,000 AI actions every month — forever, never billed again</li>
+              <li>Unlimited photo scans, Health Buddy chats, lab-report analysis</li>
+              <li>Telegram bot — log meals + get nudges right where you chat</li>
               <li>Family meal optimizer + 28-day pattern insights</li>
-              <li>Founder badge in the app (see your number on the dashboard)</li>
+              <li>Founder badge in the app (your number stays with you)</li>
             </ul>
           </div>
-          <p style="font-size: 15px; line-height: 1.6; color: #3A332D;">
-            Your charge of ₹99 has cleared. No more bills, ever.
+          <p style="font-size: 15px; line-height: 1.65; color: #3A332D;">
+            Your ₹99 has cleared. No more bills, ever. The only thing left is to show up for yourself.
           </p>
           <a href="${APP_URL}/dashboard" style="display: inline-block; background: linear-gradient(180deg, #357045 0%, #2D5F3A 100%); color: #fff; padding: 14px 28px; border-radius: 12px; text-decoration: none; font-weight: 600; font-family: 'Plus Jakarta Sans', sans-serif; margin-top: 12px;">
             Open Thalify →
           </a>
-          <p style="font-size: 13px; color: #8A7E72; margin-top: 36px; line-height: 1.6;">
-            Thank you for being one of the first. If anything's off — a meal scans wrong, the bot doesn't reply, the dashboard breaks — reply to this email. I read every founder message.
+          <div style="background: #FBF6EB; border: 1px solid #E8DFC9; border-radius: 12px; padding: 18px 20px; margin: 32px 0 12px;">
+            <div style="font-size: 13px; color: #2D5F3A; font-weight: 600; margin-bottom: 6px; font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: 0.02em;">
+              We'd love your feedback
+            </div>
+            <p style="font-size: 14.5px; line-height: 1.65; color: #3A332D; margin: 0;">
+              Please write to us at <a href="mailto:siddharth.kiit1@gmail.com" style="color: #2D5F3A; font-weight: 600;">siddharth.kiit1@gmail.com</a> with anything — what's working, what isn't, what you wish existed. <strong>We take every founder's feedback very critically</strong> and it shapes what we build next.
+            </p>
+          </div>
+          <p style="font-size: 13px; color: #8A7E72; margin-top: 24px; line-height: 1.65;">
+            If anything ever feels off — a scan looks wrong, the bot goes quiet, the dashboard breaks — just reply to this email or drop a note at the address above. I read every founder message myself.
           </p>
           <p style="font-size: 13px; color: #8A7E72; margin-top: 20px;">
-            — Siddharth (siddharth.kiit1@gmail.com)
+            — Siddharth · Thalify (siddharth.kiit1@gmail.com)
           </p>
         </div>`,
       });
