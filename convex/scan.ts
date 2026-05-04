@@ -257,6 +257,28 @@ export const scanMealAsUser = internalAction({
     const totalCal = cleaned.reduce((s, i) => s + i.cal, 0);
     const totalProtein = cleaned.reduce((s, i) => s + i.protein, 0);
 
+    // Persist the photo for admin review IF the user hasn't opted out.
+    // This path runs for Telegram photo logging (where saveScanResultInternal
+    // gets called without an imageStorageId). For web uploads, the frontend
+    // already uploads to storage before calling scanMeal, so resolvedStorageId
+    // stays undefined here and the web flow is unaffected.
+    let resolvedStorageId: Id<"_storage"> | undefined;
+    const profile: { allowPhotoStorage?: boolean } | null = await ctx.runQuery(
+      internal.users.getProfileForUser,
+      { userId },
+    );
+    const allowPhoto = profile?.allowPhotoStorage !== false;
+    if (allowPhoto) {
+      try {
+        const bytes = Uint8Array.from(atob(imageBase64), (c) => c.charCodeAt(0));
+        const blob = new Blob([bytes], { type: mediaType });
+        resolvedStorageId = await ctx.storage.store(blob);
+      } catch (err) {
+        // Non-fatal — meal still logs even if photo upload fails.
+        console.warn("photo storage upload failed, continuing without photo:", err);
+      }
+    }
+
     const scanResultId: string = await ctx.runMutation(internal.scan.saveScanResultInternal, {
       userId,
       items: cleaned,
@@ -264,6 +286,7 @@ export const scanMealAsUser = internalAction({
       totalCal,
       totalProtein,
       confidence: 0.9,
+      imageStorageId: resolvedStorageId,
     });
 
     let mealLogId: Id<"mealLogs"> | undefined;
