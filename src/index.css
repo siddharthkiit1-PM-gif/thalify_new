@@ -91,6 +91,20 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
+/* ── Mobile safety net ────────────────────────────────────────
+   Document-level rules that prevent the most common phone UI
+   regressions across every viewport from 320px (iPhone SE 1st gen)
+   to 440px (iPhone 16 Pro Max):
+     1. A stray wide element can't push horizontal scroll.
+     2. Images / SVGs never outgrow their column.
+     3. Long unbroken strings (URLs, lab values) wrap.
+   These are universally safe — they set ceilings without overriding
+   any component layout. */
+html, body { overflow-x: clip; }
+@supports not (overflow-x: clip) {
+  html, body { overflow-x: hidden; }
+}
+img, svg, video, canvas { max-width: 100%; height: auto; }
 body {
   font-family: var(--sans);
   background: var(--cream);
@@ -99,6 +113,9 @@ body {
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  -webkit-text-size-adjust: 100%;
 }
 
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
@@ -505,6 +522,13 @@ input, textarea { font-family: inherit; color: inherit; }
   .hero-preview { display: none; }
   .nav-links { display: none; }
   .nav-inner { padding: 0 16px; }
+  /* iOS Safari auto-zooms on input focus when font-size <16px.
+     Pin to 16px on mobile so focusing an input never zooms the
+     viewport — the rest of the type system still uses 13-15px. */
+  input, textarea, select { font-size: 16px; }
+  /* Snappier taps — drops the 300ms tap delay on Android Chrome
+     while keeping pinch/zoom intact. */
+  button, .btn, [role="button"] { touch-action: manipulation; }
 
   /* Editorial headlines scale down so 36px desktop type doesn't dominate
      a phone screen. !important needed because pages use inline fontSize:36

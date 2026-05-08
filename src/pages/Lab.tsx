@@ -110,7 +110,7 @@ export default function Lab() {
 
             <div style={{ background: 'var(--sage-100)', borderRadius: 12, padding: 16, fontSize: 13, color: 'var(--ink-2)' }}>
               <div style={{ fontWeight: 600, color: 'var(--sage-700)', marginBottom: 8 }}>What we read from your report:</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px', lineHeight: 1.7 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '4px 16px', lineHeight: 1.7 }}>
                 <span>HbA1c (blood sugar)</span>
                 <span>Cholesterol panel</span>
                 <span>Vitamin D & B12</span>

@@ -256,7 +256,7 @@ export default function Patterns() {
             )}
 
             {(result.wins.length > 0 || result.improvements.length > 0) && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
                 <Card variant="outline" pad="md">
                   <div className="label" style={{ marginBottom: 'var(--space-3)', color: 'var(--sage-700)' }}>Wins</div>
                   {result.wins.map((w, i) => (

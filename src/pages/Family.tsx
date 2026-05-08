@@ -261,7 +261,7 @@ export default function Family() {
               <>
                 {/* Meal type picker */}
                 <div className="label" style={{ marginBottom: 8 }}>Log as</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 6, marginBottom: 16 }}>
                   {MEAL_TYPES.map(t => (
                     <button
                       key={t}
