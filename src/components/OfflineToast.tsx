@@ -11,7 +11,20 @@ export default function OfflineToast() {
   }, [])
   if (!offline) return null
   return (
-    <div style={{ position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', background: '#1c1917', color: 'white', padding: '10px 20px', borderRadius: 99, fontSize: 13, zIndex: 1000 }}>
+    <div style={{
+      position: 'fixed',
+      bottom: 'calc(20px + env(safe-area-inset-bottom, 0px))',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      background: '#1c1917',
+      color: 'white',
+      padding: '10px 20px',
+      borderRadius: 99,
+      fontSize: 13,
+      maxWidth: 'calc(100vw - 32px)',
+      textAlign: 'center',
+      zIndex: 1000,
+    }}>
       You're offline. Check your connection.
     </div>
   )

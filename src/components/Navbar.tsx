@@ -130,8 +130,36 @@ export default function Navbar() {
             </svg>
           </div>
 
+          {menuOpen && isMobile && (
+            <div
+              onClick={() => setMenuOpen(false)}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(20, 25, 22, 0.32)',
+                backdropFilter: 'blur(2px)',
+                WebkitBackdropFilter: 'blur(2px)',
+                zIndex: 100,
+                animation: 'thalifyNotifFade 180ms ease-out',
+              }}
+              aria-hidden="true"
+            />
+          )}
           {menuOpen && (
-            <div style={{
+            <div style={isMobile ? {
+              position: 'fixed',
+              top: 'calc(62px + 8px + env(safe-area-inset-top, 0px))',
+              left: 12,
+              right: 12,
+              background: 'white',
+              border: '1px solid var(--border)',
+              borderRadius: 16,
+              boxShadow: '0 12px 40px rgba(20, 25, 22, 0.18)',
+              maxHeight: 'min(72dvh, calc(100vh - 90px - env(safe-area-inset-bottom, 0px)))',
+              overflow: 'auto',
+              zIndex: 101,
+              animation: 'thalifyNotifSlideIn 180ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+            } : {
               position: 'absolute',
               top: 'calc(100% + 8px)',
               right: 0,
@@ -139,7 +167,8 @@ export default function Navbar() {
               border: '1px solid var(--border)',
               borderRadius: 12,
               boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
-              minWidth: 240,
+              width: 260,
+              maxWidth: 'calc(100vw - 24px)',
               overflow: 'hidden',
               zIndex: 100,
             }}>

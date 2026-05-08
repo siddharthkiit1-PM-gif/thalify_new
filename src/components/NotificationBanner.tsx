@@ -32,14 +32,29 @@ export default function NotificationBanner() {
         background: 'var(--sage-100, #EEF7EC)',
         border: '1px solid var(--sage-700)',
         borderRadius: 12,
-        padding: '12px 16px',
+        padding: '12px 14px',
         marginBottom: 16,
         display: 'flex',
         alignItems: 'flex-start',
-        gap: 12,
+        gap: 10,
+        // Defensive: if the parent layout ever fails to constrain width
+        // (e.g. a sibling forces a horizontal scroll), the banner itself
+        // never extends past its container.
+        maxWidth: '100%',
+        boxSizing: 'border-box',
       }}
     >
-      <div style={{ flex: 1, fontSize: 14, lineHeight: 1.5, color: 'var(--ink)' }}>
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          fontSize: 14,
+          lineHeight: 1.5,
+          color: 'var(--ink)',
+          overflowWrap: 'break-word',
+          wordBreak: 'break-word',
+        }}
+      >
         {latest.message}
       </div>
       <button
@@ -55,6 +70,12 @@ export default function NotificationBanner() {
           fontSize: 18,
           padding: 0,
           lineHeight: 1,
+          width: 32,
+          height: 32,
+          display: 'grid',
+          placeItems: 'center',
+          flexShrink: 0,
+          borderRadius: 8,
         }}
         aria-label="Dismiss"
       >

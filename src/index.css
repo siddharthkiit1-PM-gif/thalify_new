@@ -387,6 +387,16 @@ input, textarea { font-family: inherit; color: inherit; }
   .stagger > * { animation: none; opacity: 1; transform: none; }
 }
 
+/* Notification mobile sheet */
+@keyframes thalifyNotifSlideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes thalifyNotifFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
