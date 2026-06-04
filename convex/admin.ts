@@ -2,6 +2,8 @@ import { internalMutation, internalAction, internalQuery, query } from "./_gener
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { generateText, GEMINI_MODEL_SMART } from "./ai/claude";
+import { sendText } from "./telegram/adapter";
 
 /** Single-email admin gate for personal-stats endpoints. */
 const PERSONAL_ADMIN_EMAIL = "agrawalsiddharth66@gmail.com";
@@ -435,6 +437,72 @@ export const fireWaterCheckForEmail = internalAction({
     // the next 60-second cron tick.
     await ctx.runAction(internal.nudges.worker.processNudgeQueue, {});
     return { fired: true };
+  },
+});
+
+/**
+ * Personal admin Telegram context — name + chatId + optIn for the
+ * PERSONAL_ADMIN_EMAIL account. Used by firePersonalFreshFoodNudge so the
+ * action can build the AI prompt + deliver via Telegram in one shot.
+ */
+export const getPersonalAdminTelegramContext = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const user = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("email"), PERSONAL_ADMIN_EMAIL))
+      .first();
+    if (!user) return { error: "no admin user" as const };
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .unique();
+    return {
+      name: ((user.name ?? "Siddharth").split(" ")[0] ?? "Siddharth"),
+      chatId: profile?.telegramChatId ?? null,
+      optIn: profile?.telegramOptIn === true,
+    };
+  },
+});
+
+/**
+ * One-shot: ask Gemini to write a fresh-food nudge for the personal-admin
+ * account and deliver it to their Telegram. Bypasses the nudge worker +
+ * quiet-hours gate by design — admin-only smoke test for the AI→Telegram
+ * pipeline.
+ *
+ * Call: npx convex run admin:firePersonalFreshFoodNudge --prod
+ */
+export const firePersonalFreshFoodNudge = internalAction({
+  args: {},
+  handler: async (ctx): Promise<{ sent: boolean; reason?: string; preview?: string }> => {
+    const info = await ctx.runQuery(internal.admin.getPersonalAdminTelegramContext, {});
+    if ("error" in info) return { sent: false, reason: info.error };
+    if (!info.chatId || !info.optIn) {
+      return { sent: false, reason: "admin telegram not bound or opted out" };
+    }
+
+    const systemPrompt = `You are Thalify, an Indian-food nutrition coach speaking to ${info.name} on Telegram. Write ONE warm, specific nudge (1-2 short sentences) reminding them to eat something FRESH right now — fresh fruit (banana, papaya, orange wedges, anar), raw veg (cucumber, carrot sticks, kachumber), sprouts, or dahi with fresh mint. Be specific (name the food + portion), Indian-food native. No greeting, no preamble, just the nudge.`;
+
+    let aiText: string;
+    try {
+      aiText = await generateText({
+        system: systemPrompt,
+        messages: [{ role: "user", content: "Send the fresh-food nudge now." }],
+        maxTokens: 200,
+        model: GEMINI_MODEL_SMART,
+        thinkingBudget: 0,
+      });
+    } catch (err) {
+      return { sent: false, reason: `ai failed: ${err instanceof Error ? err.message : String(err)}` };
+    }
+
+    const text = aiText.trim();
+    const result = await sendText(info.chatId, text);
+    if (!result.success) {
+      return { sent: false, reason: `telegram failed: ${result.error}`, preview: text };
+    }
+    return { sent: true, preview: text };
   },
 });
 
